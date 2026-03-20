@@ -20,7 +20,7 @@ export function ExamProgress({ current, total, answered, className }: ExamProgre
         </span>
         <span className="font-medium text-primary">{percentage}% Complete</span>
       </div>
-      <Progress value={percentage} className="h-2 bg-slate-800/50" indicatorClassName="bg-gradient-to-r from-primary to-pink-500 shadow-lg shadow-primary/30" />
+      <Progress value={percentage} className="h-2" indicatorClassName="bg-primary" />
       <div className="flex gap-1 text-xs text-slate-500">
         <span>{answered.length} answered</span>
         <span className="mx-2">|</span>

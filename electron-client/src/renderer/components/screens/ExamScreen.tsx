@@ -434,7 +434,7 @@ export function ExamScreen() {
               className={cn(
                 'gap-2',
                 showAIPanel && theme === 'dark' ? 'bg-primary/10 border-primary/30' :
-                showAIPanel && theme === 'light' ? 'bg-blue-50 border-blue-200' : ''
+                showAIPanel && theme === 'light' ? 'bg-slate-100 border-slate-300' : ''
               )}
             >
               <Bot className="w-4 h-4" />
@@ -604,14 +604,14 @@ export function ExamScreen() {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="border-l border-border bg-card overflow-hidden"
+                  className="w-80 lg:w-96 border-l border-border bg-card overflow-hidden"
                 >
                   <div className="h-full p-4">
                     <InterviewerChat questionId={currentQuestion?.id || ''} />
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
+                  </div>
+                </motion.aside>
+              )}
+            </AnimatePresence>
       </div>
 
       {/* Strike Warning Dialog */}

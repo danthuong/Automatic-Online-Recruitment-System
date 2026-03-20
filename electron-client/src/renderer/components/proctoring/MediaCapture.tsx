@@ -240,7 +240,7 @@ export function MediaCapture({
   const getAudioLevelColor = () => {
     if (audioLevel > 70) return 'bg-red-500'
     if (audioLevel > 40) return 'bg-amber-500'
-    return 'bg-emerald-500'
+    return 'bg-primary'
   }
 
   const isReady = isActive && hasAudio
@@ -297,7 +297,7 @@ export function MediaCapture({
                 <div className="flex items-center gap-2 text-white text-xs">
                   {isActive ? (
                     <>
-                      <CheckCircle className="h-3 w-3 text-emerald-400" />
+                      <CheckCircle className="h-3 w-3 text-primary" />
                       <span>Camera OK</span>
                     </>
                   ) : (
@@ -310,7 +310,7 @@ export function MediaCapture({
                 <div className="flex items-center gap-2 text-white text-xs">
                   {hasAudio ? (
                     <>
-                      <CheckCircle className="h-3 w-3 text-emerald-400" />
+                      <CheckCircle className="h-3 w-3 text-primary" />
                       <span>Mic OK</span>
                     </>
                   ) : (
@@ -382,7 +382,7 @@ export function MediaCapture({
                 </>
               ) : micTestComplete ? (
                 <>
-                  <Microscope className="h-4 w-4 mr-2 text-emerald-500" />
+                  <Microscope className="h-4 w-4 mr-2 text-primary" />
                   Tested
                 </>
               ) : (
@@ -396,7 +396,7 @@ export function MediaCapture({
         </div>
 
         {micTestAudio && (
-          <div className="flex items-center justify-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in slide-in-from-bottom">
+          <div className="flex items-center justify-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-bottom">
             <audio
               ref={audioRef}
               src={micTestAudio}
@@ -413,7 +413,7 @@ export function MediaCapture({
                 }
                 setIsPlaying(!isPlaying)
               }}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-700 transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-primary hover:bg-primary/80 transition-colors"
             >
               {isPlaying ? (
                 <Square className="h-4 w-4 text-white" />
@@ -421,7 +421,7 @@ export function MediaCapture({
                 <Play className="h-4 w-4 text-white ml-0.5" />
               )}
             </button>
-            <span className="text-sm text-emerald-700 font-medium">
+            <span className="text-sm text-primary font-medium">
               {isPlaying ? 'Playing...' : 'Tap to play recording'}
             </span>
           </div>
@@ -430,7 +430,7 @@ export function MediaCapture({
 
       <div className="text-center text-sm">
         {isReady ? (
-          <p className="text-emerald-600 flex items-center justify-center gap-2">
+          <p className="text-primary flex items-center justify-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Camera and microphone are ready
           </p>

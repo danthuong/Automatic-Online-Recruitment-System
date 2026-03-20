@@ -56,17 +56,17 @@ export function Timeline({ events, startTime, endTime, className }: TimelineProp
       case 'blur':
         return 'bg-orange-500/10 text-orange-400 border-orange-500/30'
       case 'paste':
-        return 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+        return 'bg-primary/10 text-primary border-primary/30'
       case 'devtools':
       case 'process':
-        return 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+        return 'bg-slate-500/10 text-slate-400 border-slate-500/30'
       case 'warning':
         return 'bg-red-500/10 text-red-400 border-red-500/30'
       case 'idle':
         return 'bg-slate-800/50 text-slate-400 border-slate-700/50'
       case 'start':
       case 'submit':
-        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+        return 'bg-primary/10 text-primary border-primary/30'
       default:
         return 'bg-slate-800/50 text-slate-400 border-slate-700/50'
     }
@@ -98,7 +98,7 @@ export function Timeline({ events, startTime, endTime, className }: TimelineProp
           <span className="flex items-center gap-1 text-orange-400">
             <Eye className="h-4 w-4" /> {blurCount} focus losses
           </span>
-          <span className="flex items-center gap-1 text-blue-400">
+          <span className="flex items-center gap-1 text-primary">
             <MousePointer className="h-4 w-4" /> {pasteCount} pastes
           </span>
           <span className="flex items-center gap-1 text-red-400">
@@ -108,7 +108,7 @@ export function Timeline({ events, startTime, endTime, className }: TimelineProp
       </div>
 
       <div className="relative">
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-500 via-primary to-slate-700" />
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-700" />
 
         <div className="space-y-4">
           {sortedEvents.map((event, index) => {
@@ -178,9 +178,9 @@ export function TimelineSummary({ events, startTime }: { events: TimelineEvent[]
       </div>
 
       <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
-        <div className="text-2xl font-bold text-blue-400">{pasteEvents.length}</div>
+        <div className="text-2xl font-bold text-primary">{pasteEvents.length}</div>
         <div className="text-sm text-slate-400">Paste Events</div>
-        <div className="text-xs text-blue-400/70 mt-1">
+        <div className="text-xs text-slate-500/70 mt-1">
           {pasteEvents.reduce((acc, e) => {
             const match = e.details.match(/(\d+) characters/)
             return acc + (match ? parseInt(match[1]) : 0)
@@ -197,11 +197,11 @@ export function TimelineSummary({ events, startTime }: { events: TimelineEvent[]
       </div>
 
       <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
-        <div className="text-2xl font-bold text-emerald-400">
+        <div className="text-2xl font-bold text-primary">
           {events.length > 0 ? Math.round((events.length / ((Date.now() - startTime.getTime()) / 60000)) * 60) : 0}
         </div>
         <div className="text-sm text-slate-400">Events/min</div>
-        <div className="text-xs text-emerald-400/70 mt-1">
+        <div className="text-xs text-slate-500/70 mt-1">
           Activity rate
         </div>
       </div>

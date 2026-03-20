@@ -42,7 +42,7 @@ export function Skeleton({
       {...props}
     >
       {shimmer && (
-        <div className="h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+        <div className="h-full w-full animate-pulse" />
       )}
     </div>
   )
