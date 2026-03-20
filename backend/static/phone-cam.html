@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Exam Camera</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .container {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    video {
+      width: 100%;
+      max-width: 380px;
+      border-radius: 12px;
+      display: none;
+      transform: scaleX(-1);
+      background: #000;
+    }
+    .status {
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin: 16px 0;
+      font-weight: 500;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .status.connecting { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .status.connected { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+    .status.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .status.ready { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    .status.connecting .dot { animation: pulse 1.5s infinite; }
+    .status.connected .dot { animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .info {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+    .icon { width: 20px; height: 20px; }
+    .front-hint {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+      display: none;
+    }
+    .front-hint.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>
+      <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+      </svg>
+      Exam Hand Camera
+    </h2>
+    <p class="subtitle">Position your hands clearly in frame</p>
+
+    <p class="front-hint" id="frontHint">
+      Using front camera. For best results, switch to back camera if available.
+    </p>
+
+    <video id="video" autoplay playsinline muted></video>
+
+    <div class="status connecting" id="status">
+      <span class="dot"></span>
+      <span id="statusText">Requesting camera access...</span>
+    </div>
+
+    <div class="info">
+      Keep your hands visible in the camera frame<br>
+      Ensure good lighting for best detection
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const videoEl = document.getElementById('video');
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const frontHint = document.getElementById('frontHint');
+
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+
+    let peerConnection = null;
+    let localStream = null;
+    let socket = null;
+
+    function setStatus(state, text) {
+      statusEl.className = 'status ' + state;
+      statusText.textContent = text;
+    }
+
+    function log(msg) {
+      console.log('[PhoneCam]', msg);
+    }
+
+    async function startCamera() {
+      const constraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 15 },
+        },
+        audio: false
+      };
+
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoEl.srcObject = localStream;
+        videoEl.style.display = 'block';
+        log('Camera started: ' + localStream.getVideoTracks().length + ' video track(s)');
+      } catch (err) {
+        log('Camera error: ' + err.message);
+        setStatus('error', 'Camera error: ' + err.message);
+        return null;
+      }
+
+      if (localStream.getVideoTracks().length > 0) {
+        const track = localStream.getVideoTracks()[0];
+        if (track.label.toLowerCase().includes('front')) {
+          frontHint.classList.add('show');
+        }
+      }
+
+      return localStream;
+    }
+
+    async function connectSignaling() {
+      const serverUrl = window.location.origin;
+      const signalingUrl = serverUrl.replace('http://', 'http://').replace('https://', 'https://');
+      const socketUrl = signalingUrl;
+
+      log('Connecting to signaling server: ' + socketUrl);
+
+      socket = io(socketUrl + '/signaling', {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+      });
+
+      socket.on('connect', async () => {
+        log('Connected to signaling server');
+        setStatus('connecting', 'Connecting to exam...');
+        socket.emit('phone_join', { type: 'hand_camera', phoneId: socket.id });
+      });
+
+      socket.on('exam_joined', (data) => {
+        log('Exam joined room: ' + JSON.stringify(data));
+      });
+
+      socket.on('exam_ready', () => {
+        log('Exam is ready - creating offer');
+        createPeerConnection();
+      });
+
+      socket.on('offer', async (data) => {
+        log('Received offer from exam');
+        if (!peerConnection) await createPeerConnection();
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('answer', { sdp: answer.sdp, type: answer.type });
+        log('Answer sent');
+      });
+
+      socket.on('answer', async (data) => {
+        log('Received answer');
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+      });
+
+      socket.on('ice_candidate', async (data) => {
+        try {
+          if (peerConnection && data.candidate) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            log('ICE candidate added');
+          }
+        } catch (err) {
+          log('ICE add error: ' + err.message);
+        }
+      });
+
+      socket.on('disconnect', () => {
+        log('Disconnected from signaling');
+        setStatus('error', 'Disconnected. Refresh to reconnect.');
+      });
+
+      socket.on('connect_error', (err) => {
+        log('Connection error: ' + err.message);
+        setStatus('error', 'Cannot connect to server');
+      });
+    }
+
+    async function createPeerConnection() {
+      peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+      peerConnection.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit('ice_candidate', { candidate: e.candidate.toJSON() });
+        }
+      };
+
+      peerConnection.oniceconnectionstatechange = () => {
+        log('ICE state: ' + peerConnection.iceConnectionState);
+        if (peerConnection.iceConnectionState === 'connected') {
+          setStatus('connected', 'Connected to exam system');
+        } else if (peerConnection.iceConnectionState === 'failed') {
+          setStatus('error', 'Connection failed. Check network.');
+        }
+      };
+
+      peerConnection.ontrack = (e) => {
+        log('Received track from peer: ' + e.track.kind);
+      };
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          log('Adding track: ' + track.label);
+          peerConnection.addTrack(track, localStream);
+        });
+      }
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', { sdp: offer.sdp, type: offer.type });
+      log('Offer sent');
+
+      setStatus('ready', 'Waiting for exam system...');
+    }
+
+    async function main() {
+      setStatus('connecting', 'Starting camera...');
+      const stream = await startCamera();
+      if (stream) {
+        setStatus('connecting', 'Camera ready, connecting to server...');
+        await connectSignaling();
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>

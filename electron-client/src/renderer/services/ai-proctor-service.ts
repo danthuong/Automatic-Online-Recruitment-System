@@ -104,8 +104,8 @@ export class AIProctorService {
       const ctx1 = this.canvas1.getContext('2d')
       if (!ctx0 || !ctx1) return
 
-      ctx0.drawImage(this.stream0, 0, 0, this.canvas0.width, this.canvas0.height)
-      ctx1.drawImage(this.stream1, 0, 0, this.canvas1.width, this.canvas1.height)
+      ctx0.drawImage(this.stream0 as unknown as CanvasImageSource, 0, 0, this.canvas0.width, this.canvas0.height)
+      ctx1.drawImage(this.stream1 as unknown as CanvasImageSource, 0, 0, this.canvas1.width, this.canvas1.height)
 
       const frame0 = this.canvas0.toDataURL('image/jpeg', FRAME_QUALITY)
       const frame1 = this.canvas1.toDataURL('image/jpeg', FRAME_QUALITY)
@@ -171,7 +171,7 @@ export class AIProctorService {
       isConnected: true,
       calibrationStatus,
       faceCount: data.camera_0.face_count,
-      gaze: data.camera_0.gaze,
+      gaze: data.camera_0.gaze ? { x: data.camera_0.gaze.gaze_x, y: data.camera_0.gaze.gaze_y } : null,
       headAngle: data.camera_0.head_angle,
       faceDirection: data.camera_0.face_direction,
       handsDetected: data.camera_1.hands_detected,

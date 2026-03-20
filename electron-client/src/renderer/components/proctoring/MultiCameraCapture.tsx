@@ -1,7 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
-import { Video, VideoOff, AlertCircle } from 'lucide-react'
+import { Video, VideoOff, AlertCircle, Smartphone } from 'lucide-react'
 import { cn } from '@/renderer/lib/utils'
 import { Button } from '@/renderer/components/ui/button'
+import { PhoneCameraConnector } from './PhoneCameraConnector'
 
 interface MultiCameraCaptureProps {
   onStreamsReady?: (stream0: MediaStream, stream1: MediaStream) => void
@@ -17,6 +18,8 @@ interface CameraInfo {
   error: string | null
 }
 
+type CameraSourceType = 'usb' | 'phone'
+
 export function MultiCameraCapture({
   onStreamsReady,
   onStreamStopped,
@@ -31,6 +34,7 @@ export function MultiCameraCapture({
   const [loading, setLoading] = useState(false)
   const [camera0Info, setCamera0Info] = useState<CameraInfo>({ id: null, label: '', stream: null, error: null })
   const [camera1Info, setCamera1Info] = useState<CameraInfo>({ id: null, label: '', stream: null, error: null })
+  const [cameraSource, setCameraSource] = useState<CameraSourceType>('usb')
 
   const enumerateCameras = useCallback(async () => {
     try {
@@ -49,11 +53,11 @@ export function MultiCameraCapture({
       const videoDevices = await enumerateCameras()
 
       if (videoDevices.length < 2) {
-        throw new Error('Need at least 2 cameras. Please connect a second camera.')
+        throw new Error('Need at least 2 cameras. Please connect a second camera or use phone camera.')
       }
 
-      setCamera0Info({ id: videoDevices[0].deviceId, label: videoDevices[0].label || 'Camera 1', stream: null, error: null })
-      setCamera1Info({ id: videoDevices[1].deviceId, label: videoDevices[1].label || 'Camera 2', stream: null, error: null })
+      setCamera0Info({ id: videoDevices[0].deviceId, label: videoDevices[0].label || 'Face Camera', stream: null, error: null })
+      setCamera1Info({ id: videoDevices[1].deviceId, label: videoDevices[1].label || 'Hand Camera', stream: null, error: null })
 
       const constraints0: MediaStreamConstraints = {
         video: {
@@ -105,12 +109,27 @@ export function MultiCameraCapture({
     }
   }, [enumerateCameras, onStreamsReady, onError])
 
+  const handlePhoneStreamReady = useCallback((phoneStream: MediaStream) => {
+    setStream1(phoneStream)
+    setCamera1Info({ id: null, label: 'Phone Camera', stream: phoneStream, error: null })
+
+    if (videoRef1.current) {
+      videoRef1.current.srcObject = phoneStream
+      videoRef1.current.play().catch(() => {})
+    }
+
+    setIsActive(true)
+    if (stream0) {
+      onStreamsReady?.(stream0, phoneStream)
+    }
+  }, [stream0, onStreamsReady])
+
   const stopCapture = useCallback(() => {
     if (stream0) {
       stream0.getTracks().forEach((t) => t.stop())
       setStream0(null)
     }
-    if (stream1) {
+    if (stream1 && cameraSource === 'usb') {
       stream1.getTracks().forEach((t) => t.stop())
       setStream1(null)
     }
@@ -121,7 +140,7 @@ export function MultiCameraCapture({
     setCamera0Info((prev) => ({ ...prev, stream: null }))
     setCamera1Info((prev) => ({ ...prev, stream: null }))
     onStreamStopped?.()
-  }, [stream0, stream1, onStreamStopped])
+  }, [stream0, stream1, cameraSource, onStreamStopped])
 
   useEffect(() => {
     return () => {
@@ -133,91 +152,127 @@ export function MultiCameraCapture({
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="grid grid-cols-2 gap-4">
-        {[{ ref: videoRef0, info: camera0Info, name: 'Face Camera' },
-          { ref: videoRef1, info: camera1Info, name: 'Hand Camera' }].map((cam, idx) => (
-          <div key={idx} className="relative aspect-video rounded-xl overflow-hidden bg-slate-900">
-            {!isActive && !cam.info.error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                <Video className="h-12 w-12 text-slate-500 mb-3" />
-                <p className="text-sm text-slate-400">{cam.name}</p>
-              </div>
-            )}
-
-            {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3" />
-                <p className="text-sm">Starting cameras...</p>
-              </div>
-            )}
-
-            {cam.info.error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
-                <p className="text-sm text-red-400 text-center px-4">{cam.info.error}</p>
-              </div>
-            )}
-
-            <video
-              ref={cam.ref as React.RefObject<HTMLVideoElement>}
-              autoPlay
-              playsInline
-              muted
-              className={cn(
-                'w-full h-full object-cover',
-                isActive ? 'transform scale-x-[-1]' : 'hidden'
-              )}
-            />
-
-            {isActive && (
-              <div className="absolute top-2 right-2">
-                <span className="px-2 py-0.5 bg-red-500/90 text-white text-xs font-medium rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  LIVE
-                </span>
-              </div>
-            )}
-
-            <div className="absolute bottom-2 left-2 right-2">
-              <div className="bg-black/50 backdrop-blur-sm rounded px-2 py-1">
-                <p className="text-white text-xs">{cam.name}</p>
-                <p className="text-slate-400 text-xs">{cam.info.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-center gap-3">
-        <Button
-          onClick={isActive ? stopCapture : startCapture}
-          variant={isActive ? 'destructive' : 'default'}
-          disabled={loading}
-          className="min-w-[160px]"
-        >
-          {loading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-              Loading...
-            </>
-          ) : isActive ? (
-            <>
-              <VideoOff className="h-4 w-4 mr-2" />
-              Stop Cameras
-            </>
-          ) : (
-            <>
-              <Video className="h-4 w-4 mr-2" />
-              Start Cameras
-            </>
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setCameraSource('usb')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+            cameraSource === 'usb'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
-        </Button>
+        >
+          <Video className="h-4 w-4" />
+          USB Cameras
+        </button>
+        <button
+          onClick={() => setCameraSource('phone')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+            cameraSource === 'phone'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Smartphone className="h-4 w-4" />
+          Phone Camera
+        </button>
       </div>
 
-      {hasError && (
-        <p className="text-center text-sm text-red-500">
-          {camera0Info.error || camera1Info.error}
-        </p>
+      {cameraSource === 'usb' ? (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            {[{ ref: videoRef0, info: camera0Info, name: 'Face Camera' },
+              { ref: videoRef1, info: camera1Info, name: 'Hand Camera' }].map((cam, idx) => (
+              <div key={idx} className="relative aspect-video rounded-xl overflow-hidden bg-slate-900">
+                {!isActive && !cam.info.error && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <Video className="h-12 w-12 text-slate-500 mb-3" />
+                    <p className="text-sm text-slate-400">{cam.name}</p>
+                  </div>
+                )}
+
+                {loading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3" />
+                    <p className="text-sm">Starting cameras...</p>
+                  </div>
+                )}
+
+                {cam.info.error && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
+                    <p className="text-sm text-red-400 text-center px-4">{cam.info.error}</p>
+                  </div>
+                )}
+
+                <video
+                  ref={cam.ref as React.RefObject<HTMLVideoElement>}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={cn(
+                    'w-full h-full object-cover',
+                    isActive ? 'transform scale-x-[-1]' : 'hidden'
+                  )}
+                />
+
+                {isActive && (
+                  <div className="absolute top-2 right-2">
+                    <span className="px-2 py-0.5 bg-red-500/90 text-white text-xs font-medium rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                      LIVE
+                    </span>
+                  </div>
+                )}
+
+                <div className="absolute bottom-2 left-2 right-2">
+                  <div className="bg-black/50 backdrop-blur-sm rounded px-2 py-1">
+                    <p className="text-white text-xs">{cam.name}</p>
+                    <p className="text-slate-400 text-xs">{cam.info.label}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-center gap-3">
+            <Button
+              onClick={isActive ? stopCapture : startCapture}
+              variant={isActive ? 'destructive' : 'default'}
+              disabled={loading}
+              className="min-w-[160px]"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Loading...
+                </>
+              ) : isActive ? (
+                <>
+                  <VideoOff className="h-4 w-4 mr-2" />
+                  Stop Cameras
+                </>
+              ) : (
+                <>
+                  <Video className="h-4 w-4 mr-2" />
+                  Start Cameras
+                </>
+              )}
+            </Button>
+          </div>
+
+          {hasError && (
+            <p className="text-center text-sm text-red-500">
+              {camera0Info.error || camera1Info.error}
+            </p>
+          )}
+        </>
+      ) : (
+        <PhoneCameraConnector
+          onStreamReady={handlePhoneStreamReady}
+          onError={(err) => onError?.(err)}
+        />
       )}
     </div>
   )
