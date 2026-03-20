@@ -1,11 +1,37 @@
-# Python virtual env
-venv/
-.env/
+# Environment variables
 .env
+.env.local
+.env.*.local
+.env.example
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build output
+dist/
+dist-electron/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
 .venv/
 
-# Node.js env
-node_modules/
-
-# Environment variables
-.env.*
+# Testing
+coverage/
