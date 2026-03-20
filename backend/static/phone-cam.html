@@ -140,6 +140,7 @@
     function setStatus(state, text) {
       statusEl.className = 'status ' + state;
       statusText.textContent = text;
+      log('STATUS [' + state.toUpperCase() + ']: ' + text);
     }
 
     function log(msg) {
@@ -147,6 +148,7 @@
     }
 
     async function startCamera() {
+      log('START: Requesting camera access...');
       const constraints = {
         video: {
           width: { ideal: 640 },
@@ -160,10 +162,17 @@
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoEl.srcObject = localStream;
         videoEl.style.display = 'block';
-        log('Camera started: ' + localStream.getVideoTracks().length + ' video track(s)');
+        log('OK: Camera started - ' + localStream.getVideoTracks().length + ' video track(s)');
+        log('     Camera label: ' + (localStream.getVideoTracks()[0]?.label || 'unknown'));
       } catch (err) {
-        log('Camera error: ' + err.message);
-        setStatus('error', 'Camera error: ' + err.message);
+        log('ERROR: Camera error: ' + err.name + ' - ' + err.message);
+        if (err.name === 'NotAllowedError') {
+          setStatus('error', 'Camera denied. Please allow camera access.');
+        } else if (err.name === 'NotFoundError') {
+          setStatus('error', 'No camera found on device.');
+        } else {
+          setStatus('error', 'Camera error: ' + err.message);
+        }
         return null;
       }
 
@@ -179,45 +188,86 @@
 
     async function connectSignaling() {
       const serverUrl = window.location.origin;
-      const signalingUrl = serverUrl.replace('http://', 'http://').replace('https://', 'https://');
-      const socketUrl = signalingUrl;
+      const socketUrl = serverUrl;
 
-      log('Connecting to signaling server: ' + socketUrl);
+      log('NETWORK: Testing connectivity to ' + serverUrl + '...');
+
+      // First, test basic HTTP connectivity
+      try {
+        const testResp = await fetch(serverUrl + '/health', { mode: 'cors' });
+        log('NETWORK: /health responded with status: ' + testResp.status);
+      } catch (err) {
+        log('NETWORK: /health fetch failed: ' + err.name + ' - ' + err.message);
+        log('NETWORK: This means the phone cannot reach the server at all!');
+        setStatus('error', 'Cannot reach server. Check firewall & ensure server is running on same network.');
+        return;
+      }
+
+      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/signaling');
 
       socket = io(socketUrl + '/signaling', {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
+        reconnectionDelay: 2000,
+        timeout: 20000,
       });
 
+      // Log all socket events
       socket.on('connect', async () => {
-        log('Connected to signaling server');
-        setStatus('connecting', 'Connecting to exam...');
+        log('SOCKET: Connected! socket.id=' + socket.id);
+        setStatus('connecting', 'Connected! Joining exam...');
         socket.emit('phone_join', { type: 'hand_camera', phoneId: socket.id });
       });
 
+      socket.on('disconnect', (reason) => {
+        log('SOCKET: Disconnected - reason: ' + reason);
+        setStatus('error', 'Disconnected. Refresh to reconnect.');
+      });
+
+      socket.on('connect_error', (err) => {
+        log('SOCKET: Connection error! ' + err.message);
+        log('SOCKET: Error type: ' + err.type);
+        log('SOCKET: Error description: ' + (err.description || 'none'));
+        log('SOCKET: This means Socket.IO handshake failed.');
+        setStatus('error', 'Cannot connect to server: ' + err.message);
+      });
+
+      socket.on('connect_timeout', () => {
+        log('SOCKET: Connection timed out');
+        setStatus('error', 'Connection timed out. Check network.');
+      });
+
+      socket.on('error', (err) => {
+        log('SOCKET: Error event: ' + JSON.stringify(err));
+      });
+
+      socket.on('phone_joined', (data) => {
+        log('SOCKET: phone_joined received: ' + JSON.stringify(data));
+        setStatus('ready', 'Waiting for exam system...');
+      });
+
       socket.on('exam_joined', (data) => {
-        log('Exam joined room: ' + JSON.stringify(data));
+        log('SOCKET: exam_joined: ' + JSON.stringify(data));
       });
 
       socket.on('exam_ready', () => {
-        log('Exam is ready - creating offer');
+        log('SOCKET: exam_ready received');
         createPeerConnection();
       });
 
       socket.on('offer', async (data) => {
-        log('Received offer from exam');
+        log('SOCKET: Received offer, type=' + data.type + ', sdp_len=' + (data.sdp?.length || 0));
         if (!peerConnection) await createPeerConnection();
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         socket.emit('answer', { sdp: answer.sdp, type: answer.type });
-        log('Answer sent');
+        log('SOCKET: Answer sent');
       });
 
       socket.on('answer', async (data) => {
-        log('Received answer');
+        log('SOCKET: Received answer');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
       });
 
@@ -225,66 +275,84 @@
         try {
           if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            log('ICE candidate added');
+            log('SOCKET: ICE candidate added');
           }
         } catch (err) {
-          log('ICE add error: ' + err.message);
+          log('SOCKET: ICE add error: ' + err.message);
         }
       });
 
-      socket.on('disconnect', () => {
-        log('Disconnected from signaling');
-        setStatus('error', 'Disconnected. Refresh to reconnect.');
+      socket.on('reconnect_attempt', (attempt) => {
+        log('SOCKET: Reconnect attempt #' + attempt);
+        setStatus('connecting', 'Retrying connection...');
       });
 
-      socket.on('connect_error', (err) => {
-        log('Connection error: ' + err.message);
-        setStatus('error', 'Cannot connect to server');
+      socket.on('reconnect_failed', () => {
+        log('SOCKET: Reconnect failed after all attempts');
+        setStatus('error', 'Failed to reconnect. Refresh page.');
       });
     }
 
     async function createPeerConnection() {
+      log('WEBRTC: Creating PeerConnection...');
       peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
       peerConnection.onicecandidate = (e) => {
         if (e.candidate) {
+          log('WEBRTC: ICE candidate generated: ' + e.candidate.type);
           socket.emit('ice_candidate', { candidate: e.candidate.toJSON() });
+        } else {
+          log('WEBRTC: ICE candidate generation complete (null candidate)');
         }
       };
 
       peerConnection.oniceconnectionstatechange = () => {
-        log('ICE state: ' + peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'connected') {
+        log('WEBRTC: ICE state changed to: ' + peerConnection.iceConnectionState);
+        if (peerConnection.iceConnectionState === 'checking') {
+          setStatus('connecting', 'Establishing connection...');
+        } else if (peerConnection.iceConnectionState === 'connected') {
           setStatus('connected', 'Connected to exam system');
         } else if (peerConnection.iceConnectionState === 'failed') {
-          setStatus('error', 'Connection failed. Check network.');
+          log('WEBRTC: ICE FAILED - gathering state: ' + peerConnection.iceGatheringState);
+          setStatus('error', 'WebRTC connection failed. Check network/firewall.');
+        } else if (peerConnection.iceConnectionState === 'disconnected') {
+          setStatus('error', 'Connection lost.');
         }
       };
 
+      peerConnection.onicegatheringstatechange = () => {
+        log('WEBRTC: ICE gathering state: ' + peerConnection.iceGatheringState);
+      };
+
       peerConnection.ontrack = (e) => {
-        log('Received track from peer: ' + e.track.kind);
+        log('WEBRTC: Received track from peer: ' + e.track.kind);
       };
 
       if (localStream) {
         localStream.getTracks().forEach(track => {
-          log('Adding track: ' + track.label);
+          log('WEBRTC: Adding track: ' + track.label + ' (' + track.kind + ')');
           peerConnection.addTrack(track, localStream);
         });
       }
 
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
+      log('WEBRTC: Offer created, sdp length: ' + (offer.sdp?.length || 0));
       socket.emit('offer', { sdp: offer.sdp, type: offer.type });
-      log('Offer sent');
+      log('WEBRTC: Offer sent to signaling server');
 
       setStatus('ready', 'Waiting for exam system...');
     }
 
     async function main() {
+      log('APP: Starting phone camera client...');
+      log('APP: Page URL: ' + window.location.href);
+      log('APP: Protocol: ' + window.location.protocol);
+      log('APP: Origin: ' + window.location.origin);
+
       setStatus('connecting', 'Starting camera...');
       const stream = await startCamera();
       if (stream) {
-        setStatus('connecting', 'Camera ready, connecting to server...');
         await connectSignaling();
       }
     }
