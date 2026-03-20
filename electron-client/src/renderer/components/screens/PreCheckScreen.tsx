@@ -21,6 +21,7 @@ import {
   Bot,
 } from 'lucide-react'
 import { aiProctorService } from '@/renderer/services/ai-proctor-service'
+import { getAIServerUrl, getCachedServerUrl } from '@/renderer/services/ai-server'
 import type { AIProctorState } from '@/renderer/services/ai-proctor-types'
 
 interface ChecklistItem {
@@ -106,6 +107,7 @@ export function PreCheckScreen() {
   const [mediaReady, setMediaReady] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
   const [aiServerReady, setAiServerReady] = useState(false)
+  const [serverUrl, setServerUrl] = useState<string | null>(null)
   const [aiState, setAiState] = useState<AIProctorState | null>(null)
   const [calibrationPhase, setCalibrationPhase] = useState(false)
   const [calibrationProgress, setCalibrationProgress] = useState(0)
@@ -159,11 +161,15 @@ export function PreCheckScreen() {
   const startAIServerCheck = useCallback(async () => {
     updateChecklist('aiserver', 'checking')
     try {
+      const url = await getAIServerUrl()
+      setServerUrl(url)
       const healthy = await aiProctorService.healthCheck()
       setAiServerReady(healthy)
       updateChecklist('aiserver', healthy ? 'passed' : 'failed')
       return healthy
     } catch {
+      const cached = getCachedServerUrl()
+      setServerUrl(cached)
       setAiServerReady(false)
       updateChecklist('aiserver', 'failed')
       return false
@@ -378,6 +384,32 @@ export function PreCheckScreen() {
                   status={aiServerReady ? 'passed' : aiServerReady === false ? 'failed' : 'pending'}
                 />
               </div>
+
+              {aiServerReady === false && (
+                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-600">
+                        AI Server Not Detected
+                      </p>
+                      <p className="text-xs text-red-500/80 mt-1">
+                        Please start the AI server first:
+                      </p>
+                      <p className="text-xs mt-1">
+                        <code className="bg-red-500/20 text-red-600 px-1.5 py-0.5 rounded text-[11px]">
+                          ai\start_server.bat
+                        </code>
+                      </p>
+                      {serverUrl && (
+                        <p className="text-xs text-red-500/80 mt-2">
+                          Server: <code className="bg-red-500/20 text-red-500 px-1 py-0.5 rounded text-[10px]">{serverUrl}</code>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-card border border-border rounded-lg p-6">

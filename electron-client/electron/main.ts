@@ -10,6 +10,12 @@ app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
+app.on('session-created', (session) => {
+  session.setCertificateVerifyProc((_req, callback) => {
+    callback(0)
+  })
+})
+
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
 let mainWindow: BrowserWindow | null = null
@@ -25,7 +31,6 @@ let lastBlurTime: number | null = null
 let processViolationCount = 0
 const PROCESS_VIOLATION_THRESHOLD = 3
 
-let aiServerProcess: ReturnType<typeof exec> | null = null
 const AI_SERVER_PORT = 8765
 
 type IOHookInstance = {
@@ -518,7 +523,6 @@ function stopAllMonitoring() {
   }
   globalShortcut.unregisterAll()
   disableContentProtection()
-  stopAIServer()
   console.log('[Monitoring] All stopped')
 }
 
@@ -527,100 +531,6 @@ function startAllMonitoring() {
   startDevToolsMonitoring()
   startFocusMonitoring()
   enableContentProtection()
-}
-
-function getAIPythonPath(): string {
-  const rootDir = path.join(__dirname, '..', '..')
-  return path.join(rootDir, 'ai', 'server.py')
-}
-
-function getPythonCmd(): string {
-  const rootDir = path.join(__dirname, '..', '..')
-  if (process.platform === 'win32') {
-    const venvPython = path.join(rootDir, 'venv', 'Scripts', 'python.exe')
-    try {
-      if (require('fs').existsSync(venvPython)) {
-        console.log('[AI Server] Using venv Python:', venvPython)
-        return `"${venvPython}"`
-      }
-    } catch {
-      // continue to fallback
-    }
-  }
-  console.log('[AI Server] Using system Python')
-  return process.platform === 'win32' ? 'python' : 'python3'
-}
-
-function startAIServer(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (aiServerProcess) {
-      console.log('[AI Server] Already running')
-      resolve(true)
-      return
-    }
-
-    const pythonPath = getAIPythonPath()
-    const aiDir = path.dirname(pythonPath)
-
-    console.log('[AI Server] Starting Python server...')
-    console.log('[AI Server] Python path:', pythonPath)
-
-    const pythonCmd = getPythonCmd()
-
-    aiServerProcess = exec(
-      `${pythonCmd} "${pythonPath}"`,
-      {
-        cwd: aiDir,
-        env: { ...process.env, AI_SERVER_PORT: AI_SERVER_PORT.toString() },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-      (error, stdout, stderr) => {
-        if (error && !aiServerProcess?.killed) {
-          console.error('[AI Server] Process error:', error.message)
-        }
-        aiServerProcess = null
-      }
-    )
-
-    aiServerProcess.stdout?.on('data', (data) => {
-      console.log('[AI Server]', data.toString().trim())
-    })
-
-    aiServerProcess.stderr?.on('data', (data) => {
-      console.error('[AI Server Error]', data.toString().trim())
-    })
-
-    aiServerProcess.on('exit', (code) => {
-      console.log(`[AI Server] Exited with code ${code}`)
-      aiServerProcess = null
-    })
-
-    setTimeout(() => {
-      if (aiServerProcess) {
-        console.log('[AI Server] Started successfully')
-        resolve(true)
-      } else {
-        resolve(false)
-      }
-    }, 3000)
-  })
-}
-
-function stopAIServer(): void {
-  if (!aiServerProcess) {
-    console.log('[AI Server] Not running')
-    return
-  }
-
-  console.log('[AI Server] Stopping...')
-  aiServerProcess.kill('SIGTERM')
-  
-  setTimeout(() => {
-    if (aiServerProcess) {
-      aiServerProcess.kill('SIGKILL')
-    }
-    aiServerProcess = null
-  }, 3000)
 }
 
 let contentProtectionCSS = ''
@@ -859,16 +769,6 @@ ipcMain.handle(IPC_CHANNELS.CONTENT.ENABLE_PROTECTION, async () => {
 
 ipcMain.handle(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION, async () => {
   disableContentProtection()
-  return { success: true }
-})
-
-ipcMain.handle(IPC_CHANNELS.AI.START_SERVER, async () => {
-  const success = await startAIServer()
-  return { success }
-})
-
-ipcMain.handle(IPC_CHANNELS.AI.STOP_SERVER, async () => {
-  stopAIServer()
   return { success: true }
 })
 

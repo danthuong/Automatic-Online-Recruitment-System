@@ -3,7 +3,7 @@ import { Button } from '@/renderer/components/ui/button'
 import { cn } from '@/renderer/lib/utils'
 import { useTheme } from '@/renderer/hooks/useTheme'
 import { Smartphone, Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react'
-import { getAIServerUrl } from '@/renderer/services/ai-server'
+import { getAIServerUrl, getCachedServerUrl } from '@/renderer/services/ai-server'
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -39,11 +39,13 @@ export function PhoneCameraConnector({
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [isLoadingQr, setIsLoadingQr] = useState(true)
+  const [serverUrl, setServerUrl] = useState<string | null>(null)
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadQrCode = useCallback(async () => {
     try {
       const baseUrl = await getAIServerUrl()
+      setServerUrl(baseUrl)
       const res = await fetch(`${baseUrl}/qr/info`, {
         signal: AbortSignal.timeout(3000),
       })
@@ -53,6 +55,7 @@ export function PhoneCameraConnector({
       setPhoneUrl(data.url)
       setIsLoadingQr(false)
     } catch {
+      setServerUrl(getCachedServerUrl())
       setIsLoadingQr(false)
     }
   }, [])
@@ -268,6 +271,15 @@ export function PhoneCameraConnector({
                 theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
               )}>
                 {phoneUrl}
+              </p>
+            )}
+
+            {serverUrl && (
+              <p className={cn(
+                'mt-1 text-xs text-indigo-500/70',
+                theme === 'dark' ? 'text-indigo-400/50' : 'text-indigo-400/70'
+              )}>
+                Server: {serverUrl}
               </p>
             )}
           </div>

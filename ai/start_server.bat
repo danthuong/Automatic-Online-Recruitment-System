@@ -29,6 +29,8 @@ echo   Open your browser and go to:
 echo   - https://localhost:8765/phone   (for phone camera page)
 echo   - https://localhost:8765/qr      (QR code only)
 echo.
+echo   NOTE: Accept the security warning in your browser to proceed.
+echo.
 echo   Waiting for connections...
 echo ================================================
 echo.

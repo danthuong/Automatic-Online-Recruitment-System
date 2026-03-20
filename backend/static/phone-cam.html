@@ -200,6 +200,7 @@
     let localStream = null;
     let socket = null;
     let lastHttpStatus = null;
+    let discoveredServerUrl = null;
 
     function setStatus(state, text) {
       statusEl.className = 'status ' + state;
@@ -212,9 +213,94 @@
       errMsg.textContent = msg || 'Unknown error';
       errType.textContent = type || 'unknown';
       errHttp.textContent = httpStatus || 'N/A';
-      errServer.textContent = window.location.origin;
+      errServer.textContent = discoveredServerUrl || window.location.origin;
       errSuggestion.textContent = suggestion || 'Try refreshing the page.';
       debugPanel.classList.add('show');
+    }
+
+    async function detectLanIp() {
+      return new Promise((resolve) => {
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [] });
+          pc.createDataChannel('');
+          pc.onicecandidate = (e) => {
+            if (e.candidate && e.candidate.candidate.includes('c_ip4')) {
+              const parts = e.candidate.candidate.split(' ');
+              const ip = parts[parts.length - 1];
+              if (ip && ip !== '127.0.0.1' && !ip.startsWith('10.') && !ip.startsWith('172.')) {
+                resolve(ip);
+                return;
+              }
+            }
+          };
+          pc.createOffer().then((o) => pc.setLocalDescription(o));
+          setTimeout(() => { resolve(null); }, 2000);
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    async function discoverServerUrl() {
+      const port = 8765;
+
+      // 1. Use current page origin as the base
+      const pageOrigin = window.location.origin;
+      log('DISCOVER: Trying page origin: ' + pageOrigin, 'network');
+      try {
+        const res = await fetch(pageOrigin + '/qr/info', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          discoveredServerUrl = pageOrigin;
+          log('DISCOVER: Server reachable at page origin: ' + pageOrigin, 'success');
+          return pageOrigin;
+        }
+      } catch (err) {
+        log('DISCOVER: Page origin failed: ' + err.message, 'error');
+      }
+
+      // 2. Try to get LAN IP from server
+      const lanIp = await detectLanIp();
+      if (lanIp) {
+        const url = 'https://' + lanIp + ':' + port;
+        log('DISCOVER: Detected LAN IP: ' + lanIp, 'network');
+        try {
+          const res = await fetch(url + '/qr/info', { signal: AbortSignal.timeout(3000) });
+          if (res.ok) {
+            discoveredServerUrl = url;
+            log('DISCOVER: Server reachable at LAN IP: ' + url, 'success');
+            return url;
+          }
+        } catch (err) {
+          log('DISCOVER: LAN IP URL failed: ' + err.message, 'error');
+        }
+      }
+
+      // 3. Try localhost as fallback
+      const localhostUrl = 'https://localhost:' + port;
+      log('DISCOVER: Trying localhost: ' + localhostUrl, 'network');
+      try {
+        const res = await fetch(localhostUrl + '/health', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          discoveredServerUrl = localhostUrl;
+          log('DISCOVER: Server reachable at localhost', 'success');
+          return localhostUrl;
+        }
+      } catch (err) {
+        log('DISCOVER: Localhost failed: ' + err.message, 'error');
+      }
+
+      // 4. Last resort - use detected LAN IP if available
+      if (lanIp) {
+        const url = 'https://' + lanIp + ':' + port;
+        discoveredServerUrl = url;
+        log('DISCOVER: Falling back to LAN IP: ' + url, 'error');
+        return url;
+      }
+
+      // 5. Desperate fallback - use page origin anyway
+      discoveredServerUrl = pageOrigin;
+      log('DISCOVER: Falling back to page origin: ' + pageOrigin, 'error');
+      return pageOrigin;
     }
 
     function log(msg, type = 'info') {
@@ -267,8 +353,8 @@
     }
 
     async function connectSignaling() {
-      const serverUrl = window.location.origin;
-      const socketUrl = serverUrl;
+      const serverUrl = await discoverServerUrl();
+      log('NETWORK: Using server URL: ' + serverUrl, 'network');
 
       log('NETWORK: Testing connectivity to ' + serverUrl + '...');
 
@@ -294,9 +380,9 @@
         return;
       }
 
-      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/ ...', 'network');
+      log('NETWORK: Connecting to Socket.IO at ' + serverUrl + '/ ...', 'network');
 
-      socket = io(socketUrl, {
+      socket = io(serverUrl, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,
