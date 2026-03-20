@@ -95,6 +95,10 @@
     </h2>
     <p class="subtitle">Position your hands clearly in frame</p>
 
+    <div id="securityNotice" style="display:none; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:12px; margin-bottom:16px; font-size:0.8rem; color:#f59e0b;">
+      <strong>&#9888; Security Warning:</strong> If you see "Your connection is not private", tap <strong>Advanced</strong> then tap <strong>Proceed to [IP] (unsafe)</strong>
+    </div>
+
     <p class="front-hint" id="frontHint">
       Using front camera. For best results, switch to back camera if available.
     </p>
@@ -114,6 +118,11 @@
 
   <script src="/static/socket.io.min.js"></script>
   <script>
+    // Auto-redirect HTTP to HTTPS
+    if (window.location.protocol === 'http:') {
+      window.location.href = window.location.href.replace('http:', 'https:');
+    }
+
     const videoEl = document.getElementById('video');
     const statusEl = document.getElementById('status');
     const statusText = document.getElementById('statusText');

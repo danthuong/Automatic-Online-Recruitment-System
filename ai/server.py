@@ -273,7 +273,7 @@ async def phone_page():
 @app.get("/qr")
 async def qr_code(port: int = 8765):
     local_ip = get_local_ip()
-    url = f"http://{local_ip}:{port}/phone"
+    url = f"https://{local_ip}:{port}/phone"
     png_data = generate_qr_png(url)
     return Response(content=png_data, media_type="image/png")
 
@@ -281,7 +281,7 @@ async def qr_code(port: int = 8765):
 @app.get("/qr/info")
 async def qr_info(port: int = 8765):
     local_ip = get_local_ip()
-    phone_url = f"http://{local_ip}:{port}/phone"
+    phone_url = f"https://{local_ip}:{port}/phone"
     qr_b64 = generate_qr_png(phone_url)
     return {
         'ip': local_ip,
@@ -293,21 +293,28 @@ async def qr_info(port: int = 8765):
 if __name__ == "__main__":
     port = int(os.environ.get("AI_SERVER_PORT", 8765))
     local_ip = get_local_ip()
-    phone_url = f"http://{local_ip}:{port}/phone"
+    phone_url = f"https://{local_ip}:{port}/phone"
     qr_data = generate_qr_png(phone_url)
 
     print("=" * 50)
-    print(f"[AI Server] Starting on port {port}")
+    print(f"[AI Server] Starting on port {port} (HTTPS)")
     print(f"[AI Server] Local IP: {local_ip}")
     print(f"[AI Server] Phone URL: {phone_url}")
     print(f"[AI Server] QR Code generated ({len(qr_data)} bytes)")
-    print(f"[AI Server] Open http://localhost:{port}/phone")
+    print("=" * 50)
+    print(" On the phone:")
+    print(" 1. Open: " + phone_url)
+    print(" 2. Click 'Advanced' on the security warning")
+    print(" 3. Click 'Proceed to site (unsafe)")
+    print(" 4. Allow camera access when prompted")
     print("=" * 50)
 
     uvicorn.run(
         socket_app,
         host="0.0.0.0",
         port=port,
+        ssl_keyfile="key.pem",
+        ssl_certfile="cert.pem",
         reload=False,
         log_level="info",
     )
