@@ -73,7 +73,7 @@ export function FeedbackPanel({
               <div className="flex items-center gap-2 mb-2">
                 <Icon className={cn(
                   "w-4 h-4",
-                  theme === 'dark' ? 'text-primary' : 'text-blue-600'
+                  theme === 'dark' ? 'text-primary' : 'text-primary'
                 )} />
                 <span className={cn(
                   "text-xs",
@@ -97,7 +97,7 @@ export function FeedbackPanel({
                 <motion.div
                   className={cn(
                     "h-full rounded-full",
-                    theme === 'dark' ? 'bg-primary' : 'bg-blue-500'
+                    theme === 'dark' ? 'bg-primary' : 'bg-primary'
                   )}
                   initial={{ width: 0 }}
                   animate={{ width: `${percentage}%` }}

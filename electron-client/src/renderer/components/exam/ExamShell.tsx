@@ -10,7 +10,7 @@ interface ExamShellProps {
 
 export function ExamShell({ children, sidebar, header, className }: ExamShellProps) {
   return (
-    <div className={cn('min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950', className)}>
+    <div className={cn('min-h-screen bg-slate-900', className)}>
       {header && (
         <header className="sticky top-0 z-40 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-xl">
           {header}

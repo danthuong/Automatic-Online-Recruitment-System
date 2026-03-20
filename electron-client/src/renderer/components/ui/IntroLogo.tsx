@@ -42,31 +42,46 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
       width={size}
       height={size}
       viewBox="0 0 200 200"
-      className={cn(animated && 'logo-breathe', className)}
+      className={cn(animated && 'animate-fade-in', className)}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        {/* HCMUT Blue gradient */}
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#032D91" />
-          <stop offset="100%" stopColor="#1488DB" />
-        </linearGradient>
-
-        {/* Soft glow for dark mode */}
-        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+      <style>
+        {`
+          .stroke-draw {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: strokeDraw 1.5s ease-out forwards;
+          }
+          .stroke-draw-1 {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: strokeDraw 1.5s ease-out 0.15s forwards;
+          }
+          .stroke-draw-2 {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: strokeDraw 1.5s ease-out 0.3s forwards;
+          }
+          .lotus-fade {
+            opacity: 0;
+            animation: lotusFade 600ms ease-out forwards;
+            animation-delay: 0.8s;
+          }
+          @keyframes strokeDraw {
+            to { stroke-dashoffset: 0; }
+          }
+          @keyframes lotusFade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}
+      </style>
 
       {/* Outer Hexagon - HCMUT branding */}
       <path
         d={hexagonPath}
-        stroke="url(#logoGradient)"
+        stroke="#6366F1"
         strokeWidth="2"
         fill="none"
         className={animated ? 'stroke-draw' : ''}
@@ -75,15 +90,15 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
       {/* Inner decorative hexagon */}
       <path
         d={innerHexagonPath}
-        stroke="url(#logoGradient)"
+        stroke="#6366F1"
         strokeWidth="1.5"
-        strokeOpacity="0.6"
+        strokeOpacity="0.5"
         fill="none"
-        className={animated ? 'stroke-draw-delay-1' : ''}
+        className={animated ? 'stroke-draw-1' : ''}
       />
 
-      {/* Lotus petals - stylized */}
-      <g className={animated ? 'lotus-bloom' : ''}>
+      {/* Lotus petals - Clean, solid indigo */}
+      <g className={animated ? 'lotus-fade' : ''}>
         {/* Center lotus petals */}
         {[0, 60, 120, 180, 240, 300].map((angle, i) => {
           const rad = (angle * Math.PI) / 180
@@ -105,9 +120,8 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
             <path
               key={i}
               d={`M ${leftX} ${leftY} Q ${tipX} ${tipY} ${rightX} ${rightY} Q ${cx} ${cy} ${leftX} ${leftY}`}
-              fill="url(#logoGradient)"
+              fill="#6366F1"
               fillOpacity="0.8"
-              className="transition-all duration-300"
             />
           )
         })}
@@ -133,9 +147,8 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
             <path
               key={`inner-${i}`}
               d={`M ${leftX} ${leftY} Q ${tipX} ${tipY} ${rightX} ${rightY} Q ${cx} ${cy} ${leftX} ${leftY}`}
-              fill="url(#logoGradient)"
+              fill="#6366F1"
               fillOpacity="0.95"
-              className="transition-all duration-300"
             />
           )
         })}
@@ -145,7 +158,7 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
           cx={centerX}
           cy={centerY}
           r="6"
-          fill="url(#logoGradient)"
+          fill="#6366F1"
         />
       </g>
 
@@ -157,11 +170,11 @@ export function IntroLogo({ className, animated = false, size = 200 }: IntroLogo
           y1={point.y}
           x2={centerX + innerRadius * 0.8 * Math.cos((Math.PI / 3) * i - Math.PI / 2)}
           y2={centerY + innerRadius * 0.8 * Math.sin((Math.PI / 3) * i - Math.PI / 2)}
-          stroke="url(#logoGradient)"
+          stroke="#6366F1"
           strokeWidth="1"
-          strokeOpacity="0.4"
+          strokeOpacity="0.3"
           strokeDasharray="4 4"
-          className={animated ? 'stroke-draw-delay-2' : ''}
+          className={animated ? 'stroke-draw-2' : ''}
         />
       ))}
     </svg>

@@ -4,92 +4,80 @@
 
 @layer base {
   :root {
-    /* Professional Light Theme */
-    --background: 0 0% 99%;
-    --foreground: 222 47% 11%;
+    /* Professional Neutral Light Theme */
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 20% 10%;
 
-    /* HCMUT Blue - Professional */
-    --primary: 212 96% 50%;
+    /* Indigo-500 - Professional, Balanced */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary-foreground: 220 20% 10%;
 
     --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 45%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent-foreground: 220 20% 10%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 70% 38%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 212 96% 50%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
     --radius: 0.5rem;
-
-    /* Surface colors */
-    --surface-elevated: 0 0% 100%;
-    --surface-muted: 220 14% 96%;
-
-    /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
   .dark {
-    /* Professional Dark Theme */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    /* Professional Neutral Dark Theme */
+    --background: 220 21% 7%;
+    --foreground: 210 17% 95%;
 
-    --card: 222 30% 9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 21% 11%;
+    --card-foreground: 210 17% 95%;
 
-    --popover: 222 30% 9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 21% 11%;
+    --popover-foreground: 210 17% 95%;
 
-    /* HCMUT Blue - Lighter for dark mode */
-    --primary: 212 96% 57%;
+    /* Indigo-500 - Softer for dark mode */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 30% 12%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 220 18% 15%;
+    --secondary-foreground: 210 17% 90%;
 
-    --muted: 222 20% 15%;
-    --muted-foreground: 215 20% 60%;
+    --muted: 220 18% 15%;
+    --muted-foreground: 215 14% 60%;
 
-    --accent: 222 30% 15%;
-    --accent-foreground: 210 40% 90%;
+    --accent: 220 18% 18%;
+    --accent-foreground: 210 17% 90%;
 
-    --destructive: 0 62% 55%;
+    --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
+    --success: 142 68% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 222 20% 18%;
-    --input: 222 20% 18%;
-    --ring: 212 96% 57%;
-
-    /* Surface colors */
-    --surface-elevated: 222 30% 11%;
-    --surface-muted: 222 20% 12%;
+    --border: 220 18% 20%;
+    --input: 220 18% 20%;
+    --ring: 239 84% 67%;
   }
 }
 
@@ -100,125 +88,110 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Smooth transitions for theme changes */
   html {
-    transition: background-color 0.3s ease, color 0.3s ease;
+    scroll-behavior: smooth;
   }
 
-  /* Code font */
   code, pre, kbd {
-    font-family: var(--font-mono);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
 }
 
 @layer components {
-  /* ========================================
-     PROFFESSIONAL CARD STYLES
-     ======================================== */
-  
+  /* Professional Card - Soft, Clean */
   .card-professional {
-    @apply bg-card border border-border rounded-lg shadow-sm;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    @apply bg-card border border-border rounded-lg;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: box-shadow 200ms ease;
   }
 
   .card-professional:hover {
-    @apply shadow-md;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.08);
   }
 
-  .card-elevated {
-    @apply bg-card border border-border rounded-lg shadow-md;
-  }
-
-  /* ========================================
-     PROFFESSIONAL BUTTON BASE
-     ======================================== */
-  
+  /* Professional Button - Solid Indigo */
   .btn-primary {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply bg-primary text-primary-foreground;
-    @apply hover:bg-primary/90;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply hover:opacity-90;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all 0.2s ease;
+    transition: all 200ms ease;
+  }
+
+  .btn-primary:hover {
+    transform: scale(1.01);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.99);
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply bg-secondary text-secondary-foreground;
-    @apply hover:bg-secondary/80;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply hover:opacity-80;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all 0.2s ease;
+    transition: all 200ms ease;
   }
 
   .btn-outline {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
-    @apply border border-border bg-transparent;
+    @apply border border-input bg-transparent;
     @apply hover:bg-accent hover:text-accent-foreground;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all 0.2s ease;
+    transition: all 200ms ease;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply hover:bg-accent hover:text-accent-foreground;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all 0.2s ease;
+    transition: all 200ms ease;
   }
 
-  /* ========================================
-     PROFFESSIONAL INPUT
-     ======================================== */
-  
+  /* Professional Input - Clean */
   .input-professional {
     @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm;
     @apply placeholder:text-muted-foreground;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
 
-  /* ========================================
-     PROFFESSIONAL PROGRESS
-     ======================================== */
-  
+  /* Progress Bar - Simple Indigo */
   .progress-professional {
-    @apply h-2 w-full overflow-hidden rounded-full bg-muted;
+    @apply relative w-full overflow-hidden rounded-full bg-secondary;
   }
 
   .progress-professional-bar {
-    @apply h-full transition-all duration-300 ease-out;
+    @apply h-full transition-all duration-300 ease;
   }
 
-  /* ========================================
-     PROFFESSIONAL BADGE
-     ======================================== */
-  
+  /* Badge - Clean, Minimal */
   .badge-professional {
-    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium;
-    @apply transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium;
+    @apply transition-colors;
   }
 
-  /* ========================================
-     PROFFESSIONAL SCROLLBAR
-     ======================================== */
-  
+  /* Scrollbar - Subtle */
   .scrollbar-professional {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
 
   .scrollbar-professional::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   .scrollbar-professional::-webkit-scrollbar-track {
@@ -231,57 +204,31 @@
   }
 
   .scrollbar-professional::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground));
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
 @layer utilities {
-  /* ========================================
-     FOCUS RING UTILITIES
-     ======================================== */
-  
+  /* Focus Ring - Soft */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
-  /* ========================================
-     TEXT UTILITIES
-     ======================================== */
-  
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* ========================================
-     CONTAINER UTILITIES
-     ======================================== */
-  
-  .container-professional {
-    @apply mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8;
-  }
-
-  /* ========================================
-     ANIMATION UTILITIES (Subtle Only)
-     ======================================== */
-  
+  /* Animation Utilities - Slow, Smooth */
   .animate-fade-in {
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 400ms ease-out forwards;
   }
 
   .animate-fade-out {
-    animation: fadeOut 0.3s ease-in;
+    animation: fadeOut 300ms ease-in forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
+    animation: slideUp 400ms ease-out forwards;
   }
 
   .animate-slide-down {
-    animation: slideDown 0.3s ease-out;
-  }
-
-  .animate-scale-in {
-    animation: scaleIn 0.2s ease-out;
+    animation: slideDown 300ms ease-out forwards;
   }
 
   @keyframes fadeIn {
@@ -295,50 +242,36 @@
   }
 
   @keyframes slideUp {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
+    from { opacity: 0; transform: translateY(-16px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  /* ========================================
-     SELECTION
-     ======================================== */
-  
-  ::selection {
-    background-color: hsl(var(--primary) / 0.2);
   }
 }
 
 /* ========================================
-   INTRO ANIMATION STYLES
+   INTRO ANIMATION - Stroke Drawing
    ======================================== */
 
-/* Stroke drawing animation */
 .stroke-draw {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  animation: strokeDraw 1s ease-out forwards;
+  animation: strokeDraw 1.2s ease-out forwards;
 }
 
 .stroke-draw-delay-1 {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: strokeDraw 1s ease-out 0.2s forwards;
+  animation: strokeDraw 1.2s ease-out 0.2s forwards;
 }
 
 .stroke-draw-delay-2 {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: strokeDraw 1s ease-out 0.4s forwards;
+  animation: strokeDraw 1.2s ease-out 0.4s forwards;
+}
+
+.stroke-draw-delay-3 {
+  animation: strokeDraw 1.2s ease-out 0.6s forwards;
 }
 
 @keyframes strokeDraw {
@@ -347,62 +280,41 @@
   }
 }
 
-/* Lotus bloom animation */
-.lotus-bloom {
-  transform-origin: center;
+/* Logo fill animation - fade in after stroke */
+.logo-fill {
   opacity: 0;
-  animation: lotusBloom 0.8s ease-out forwards;
-  animation-delay: 1.2s;
+  animation: logoFill 600ms ease-out forwards;
+  animation-delay: 1s;
 }
 
-@keyframes lotusBloom {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes logoFill {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Text fade in */
+/* Text fade in - slow, elegant */
 .text-fade-in {
   opacity: 0;
-  animation: textFadeIn 0.6s ease-out forwards;
-  animation-delay: 2s;
+  animation: textFadeIn 500ms ease-out forwards;
+  animation-delay: 1.4s;
 }
 
 @keyframes textFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Subtle breathing effect for logo */
-.logo-breathe {
-  animation: breathe 3s ease-in-out infinite;
-  animation-delay: 2.5s;
+/* Progress bar - simple, clean */
+.progress-fill {
+  animation: progressFill linear forwards;
 }
 
-@keyframes breathe {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.85;
-  }
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: 100%; }
 }
 
-/* Loading dots */
+/* Loading dots - subtle */
 .loading-dots {
   display: inline-flex;
   gap: 4px;
@@ -431,10 +343,15 @@
 @keyframes loadingDot {
   0%, 80%, 100% {
     opacity: 0.3;
-    transform: scale(0.8);
+    transform: scale(0.9);
   }
   40% {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Selection - Indigo tint */
+::selection {
+  background-color: hsl(var(--primary) / 0.15);
 }

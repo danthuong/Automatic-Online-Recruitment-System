@@ -35,10 +35,10 @@ export function QuestionNav({
   }
 
   const statusStyles = {
-    current: 'bg-gradient-to-br from-primary to-pink-500 text-white shadow-lg shadow-primary/30 ring-2 ring-primary',
-    answered: 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20',
+    current: 'bg-primary text-white ring-2 ring-primary',
+    answered: 'bg-slate-700 text-white',
     unanswered: 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700/50 hover:border-primary/30',
-    flagged: 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20',
+    flagged: 'bg-amber-500 text-white',
   }
 
   const typeIcons = {
@@ -107,7 +107,7 @@ export function QuestionNav({
         <div className="space-y-1 text-xs">
           {Object.entries(typeIcons).map(( [type, label]) => (
             <div key={type} className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded bg-gradient-to-br from-primary to-pink-500 text-white flex items-center justify-center text-[8px] shadow-md">
+              <div className="h-4 w-4 rounded bg-primary text-white flex items-center justify-center text-[8px]">
                 {label}
               </div>
               <span className="text-slate-400 capitalize">{type === 'mcq' ? 'Multiple Choice' : type === 'code' ? 'Code' : 'Essay'}</span>

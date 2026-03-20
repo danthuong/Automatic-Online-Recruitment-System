@@ -66,14 +66,19 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        "soft": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-        "card": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-        "card-hover": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-        "elevated": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "soft": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "soft-sm": "0 1px 1px 0 rgba(0, 0, 0, 0.05)",
+        "card": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "card-hover": "0 2px 4px 0 rgba(0, 0, 0, 0.08)",
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+      transitionDuration: {
+        'fast': '150ms',
+        'normal': '200ms',
+        'slow': '400ms',
       },
       keyframes: {
         "accordion-down": {
@@ -89,7 +94,7 @@ module.exports = {
           to: { opacity: "1" },
         },
         "fade-in-up": {
-          from: { opacity: "0", transform: "translateY(10px)" },
+          from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "slide-in-right": {
@@ -100,28 +105,14 @@ module.exports = {
           from: { transform: "translateX(-100%)" },
           to: { transform: "translateX(0)" },
         },
-        "scale-in": {
-          from: { opacity: "0", transform: "scale(0.95)" },
-          to: { opacity: "1", transform: "scale(1)" },
-        },
-        "slide-up": {
-          from: { opacity: "0", transform: "translateY(20px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.4s ease-out",
-        "fade-in-up": "fade-in-up 0.4s ease-out",
-        "slide-in-right": "slide-in-right 0.3s ease-out",
-        "slide-in-left": "slide-in-left 0.3s ease-out",
-        "scale-in": "scale-in 0.2s ease-out",
-        "slide-up": "slide-up 0.4s ease-out",
-      },
-      transitionDuration: {
-        "400": "400ms",
-        "600": "600ms",
+        "accordion-down": "accordion-down 200ms ease",
+        "accordion-up": "accordion-up 200ms ease",
+        "fade-in": "fade-in 400ms ease-out",
+        "fade-in-up": "fade-in-up 400ms ease-out",
+        "slide-in-right": "slide-in-right 300ms ease",
+        "slide-in-left": "slide-in-left 300ms ease",
       },
     },
   },
