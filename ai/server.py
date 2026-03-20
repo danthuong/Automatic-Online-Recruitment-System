@@ -3,10 +3,8 @@ import sys
 import time
 import base64
 import io
-import traceback
 import socket
 import qrcode
-import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -91,8 +89,9 @@ async def disconnect(sid):
 async def phone_join(sid, data):
     print(f"[Signaling] Phone joined: {sid}, data: {data}")
     await sio.enter_room(sid, 'exam-room')
+    await sio.emit('phone_joined', {'phoneId': sid, 'type': data.get('type', 'hand_camera')}, room='exam-room', skip_sid=sid)
     await sio.emit('exam_ready', room='exam-room', skip_sid=sid)
-    print(f"[Signaling] Phone {sid} joined exam-room, notified exam client")
+    print(f"[Signaling] Phone {sid} joined exam-room")
 
 
 @sio.event
@@ -126,24 +125,18 @@ async def lifespan(app: FastAPI):
     print("[AI Server] Starting...")
     try:
         if not os.path.exists(FACE_MODEL_PATH):
-            print(f"[AI Server] WARNING: face_landmarker.task not found at {FACE_MODEL_PATH}")
+            print(f"[AI Server] WARNING: face_landmarker.task not found")
         if not os.path.exists(HAND_MODEL_PATH):
-            print(f"[AI Server] WARNING: gesture_model.pkl not found at {HAND_MODEL_PATH}")
+            print(f"[AI Server] WARNING: gesture_model.pkl not found")
         if not os.path.exists(HAND_TASK_PATH):
-            print(f"[AI Server] WARNING: hand_landmarker.task not found at {HAND_TASK_PATH}")
-
-        if os.path.exists(STATIC_DIR):
-            app.mount("/static", StaticFiles(directory=STATIC_DIR, html=False), name="static")
-            print(f"[AI Server] Static files mounted at /static")
-        else:
-            print(f"[AI Server] WARNING: static directory not found at {STATIC_DIR}")
+            print(f"[AI Server] WARNING: hand_landmarker.task not found")
 
         if os.path.exists(FACE_MODEL_PATH) and os.path.exists(HAND_MODEL_PATH) and os.path.exists(HAND_TASK_PATH):
             proctor_engine = ProctoringEngine(camera_index=0, model_path=FACE_MODEL_PATH)
             proctor_engine.initialize()
             proctor_engine.frame_timestamp_ms = 0
             gesture_detector = GestureDetector(model_path=HAND_MODEL_PATH, hand_task_path=HAND_TASK_PATH)
-            print("[AI Server] All AI models loaded successfully")
+            print("[AI Server] AI models loaded")
         else:
             print("[AI Server] AI models not loaded - signaling-only mode")
 
@@ -170,6 +163,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR, html=False), name="static")
+    print(f"[AI Server] Static files at /static")
 
 socket_app = socketio.ASGIApp(sio, app)
 
@@ -274,17 +271,17 @@ async def phone_page():
 
 
 @app.get("/qr")
-async def qr_code():
+async def qr_code(port: int = 8765):
     local_ip = get_local_ip()
-    url = f"http://{local_ip}:8765/phone"
+    url = f"http://{local_ip}:{port}/phone"
     png_data = generate_qr_png(url)
     return Response(content=png_data, media_type="image/png")
 
 
 @app.get("/qr/info")
-async def qr_info():
+async def qr_info(port: int = 8765):
     local_ip = get_local_ip()
-    phone_url = f"http://{local_ip}:8765/phone"
+    phone_url = f"http://{local_ip}:{port}/phone"
     qr_b64 = generate_qr_png(phone_url)
     return {
         'ip': local_ip,
@@ -304,8 +301,7 @@ if __name__ == "__main__":
     print(f"[AI Server] Local IP: {local_ip}")
     print(f"[AI Server] Phone URL: {phone_url}")
     print(f"[AI Server] QR Code generated ({len(qr_data)} bytes)")
-    print(f"[AI Server] Open /phone for phone camera page")
-    print(f"[AI Server] Open /qr for QR code image")
+    print(f"[AI Server] Open http://localhost:{port}/phone")
     print("=" * 50)
 
     uvicorn.run(
