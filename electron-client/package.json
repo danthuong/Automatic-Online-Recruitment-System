@@ -75,22 +75,12 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
-      "build/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "build/Release",
-        "to": "build/Release",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "dist-electron/**/*"
     ],
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": [
             "x64"
           ]
@@ -98,10 +88,7 @@
       ],
       "icon": "public/icon.ico"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "requireAdminRights": true
-    }
+    "codeSign": false,
+    "afterPack": "./scripts/after-pack.js"
   }
 }

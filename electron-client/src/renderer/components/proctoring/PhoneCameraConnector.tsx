@@ -3,8 +3,7 @@ import { Button } from '@/renderer/components/ui/button'
 import { cn } from '@/renderer/lib/utils'
 import { useTheme } from '@/renderer/hooks/useTheme'
 import { Smartphone, Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react'
-
-const AI_SERVER_URL = 'http://127.0.0.1:8765'
+import { getAIServerUrl } from '@/renderer/services/ai-server'
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -44,7 +43,8 @@ export function PhoneCameraConnector({
 
   const loadQrCode = useCallback(async () => {
     try {
-      const res = await fetch(`${AI_SERVER_URL}/qr/info`, {
+      const baseUrl = await getAIServerUrl()
+      const res = await fetch(`${baseUrl}/qr/info`, {
         signal: AbortSignal.timeout(3000),
       })
       if (!res.ok) return
@@ -104,9 +104,10 @@ export function PhoneCameraConnector({
     })
   }
 
-  const connectSignaling = (): Promise<void> => {
+  const connectSignaling = async (): Promise<void> => {
+    const serverUrl = await getAIServerUrl()
     return new Promise((resolve, reject) => {
-      const socket = window.io(`${AI_SERVER_URL}`, {
+      const socket = window.io(serverUrl, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,

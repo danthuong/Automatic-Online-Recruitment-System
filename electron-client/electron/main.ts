@@ -8,6 +8,7 @@ process.env.NODE_ENV = 'development'
 app.commandLine.appendSwitch('enable-features', 'HardwareMediaStreamEncoding,VaapiVideoDecoder')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
+app.commandLine.appendSwitch('ignore-certificate-errors')
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
@@ -533,6 +534,23 @@ function getAIPythonPath(): string {
   return path.join(rootDir, 'ai', 'server.py')
 }
 
+function getPythonCmd(): string {
+  const rootDir = path.join(__dirname, '..', '..')
+  if (process.platform === 'win32') {
+    const venvPython = path.join(rootDir, 'venv', 'Scripts', 'python.exe')
+    try {
+      if (require('fs').existsSync(venvPython)) {
+        console.log('[AI Server] Using venv Python:', venvPython)
+        return `"${venvPython}"`
+      }
+    } catch {
+      // continue to fallback
+    }
+  }
+  console.log('[AI Server] Using system Python')
+  return process.platform === 'win32' ? 'python' : 'python3'
+}
+
 function startAIServer(): Promise<boolean> {
   return new Promise((resolve) => {
     if (aiServerProcess) {
@@ -547,7 +565,7 @@ function startAIServer(): Promise<boolean> {
     console.log('[AI Server] Starting Python server...')
     console.log('[AI Server] Python path:', pythonPath)
 
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+    const pythonCmd = getPythonCmd()
 
     aiServerProcess = exec(
       `${pythonCmd} "${pythonPath}"`,

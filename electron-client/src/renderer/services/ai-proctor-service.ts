@@ -1,9 +1,8 @@
 import type { AIProctorResponse, AIAlert, AIProctorState } from './ai-proctor-types'
+import { getAIServerUrl } from './ai-server'
 
-const AI_SERVER_URL = 'http://127.0.0.1:8765'
 const FRAME_INTERVAL_MS = 200
 const FRAME_QUALITY = 0.6
-const CALIBRATION_FRAMES = 30
 
 export type AIProctorCallback = (state: AIProctorState) => void
 export type AIAlertCallback = (alert: AIAlert) => void
@@ -51,7 +50,8 @@ export class AIProctorService {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const res = await fetch(`${AI_SERVER_URL}/health`, {
+      const baseUrl = await getAIServerUrl()
+      const res = await fetch(`${baseUrl}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(3000),
       })
@@ -67,7 +67,8 @@ export class AIProctorService {
 
   async calibrate(): Promise<void> {
     try {
-      await fetch(`${AI_SERVER_URL}/calibrate`, { method: 'POST' })
+      const baseUrl = await getAIServerUrl()
+      await fetch(`${baseUrl}/calibrate`, { method: 'POST' })
     } catch (e) {
       console.error('[AIProctorService] Calibrate failed:', e)
     }
@@ -117,7 +118,8 @@ export class AIProctorService {
       const timeout = setTimeout(() => controller.abort(), 3000)
 
       try {
-        const res = await fetch(`${AI_SERVER_URL}/process_frame`, {
+        const baseUrl = await getAIServerUrl()
+        const res = await fetch(`${baseUrl}/process_frame`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ camera_0: b64_0, camera_1: b64_1 }),
