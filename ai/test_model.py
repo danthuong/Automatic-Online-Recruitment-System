@@ -1,12 +1,12 @@
 import cv2
-import mediapipe as mp
 import numpy as np
 import pandas as pd
 import pickle
 import os
 
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+from mediapipe.tasks.python.core import base_options as mp_base_options
+from mediapipe.tasks.python.vision import HandLandmarker, HandLandmarkerOptions, RunningMode
+from mediapipe import Image, ImageFormat
 
 HAND_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 4),
@@ -70,21 +70,21 @@ class GestureDetector:
         self.feature_names = feature_names
 
     def _init_mediapipe(self):
-        base_options = python.BaseOptions(model_asset_path=self.hand_task_path)
-        options = vision.HandLandmarkerOptions(
+        base_options = mp_base_options.BaseOptions(model_asset_path=self.hand_task_path)
+        options = HandLandmarkerOptions(
             base_options=base_options,
-            running_mode=vision.RunningMode.VIDEO,
+            running_mode=RunningMode.VIDEO,
             num_hands=2,
             min_hand_detection_confidence=0.5,
             min_hand_presence_confidence=0.5,
             min_tracking_confidence=0.5
         )
-        self.hand_landmarker = vision.HandLandmarker.create_from_options(options)
+        self.hand_landmarker = HandLandmarker.create_from_options(options)
 
     def process_frame(self, frame, frame_timestamp_ms=0):
         h, w, _ = frame.shape
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        mp_image = Image(image_format=ImageFormat.SRGB, data=rgb_frame)
         result = self.hand_landmarker.detect_for_video(mp_image, frame_timestamp_ms)
 
         if not result.hand_landmarks:
@@ -113,14 +113,14 @@ class GestureDetector:
         pred_encoded = self.model.predict(df_input)[0]
         probs = self.model.predict_proba(df_input)[0]
         cheating_prob = 0.0
-        
+
         for i, label in enumerate(self.label_encoder.classes_):
             if 'cheat' in str(label).lower():
                 cheating_prob = float(probs[i])
                 break
 
         predicted_label = str(self.label_encoder.inverse_transform([pred_encoded])[0])
-        
+
         is_cheating = 'cheat' in predicted_label.lower() or cheating_prob >= CHEATING_CONFIDENCE_THRESHOLD
         is_strike = cheating_prob >= CHEATING_STRIKE_THRESHOLD
 
