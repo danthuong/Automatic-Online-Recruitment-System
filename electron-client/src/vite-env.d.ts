@@ -85,8 +85,8 @@ interface ElectronEvents {
   onShortcutBlocked: (callback: (shortcut: string) => void) => () => void
   onViolation: (callback: (reason: string) => void) => void
   onForbiddenApp: (callback: (processName: string) => void) => void
-  onFocusLost: (callback: () => void) => void
-  onFocusGained: (callback: () => void) => void
+  onFocusLost: (callback: () => void) => () => void
+  onFocusGained: (callback: () => void) => () => void
   onDevToolsOpened: (callback: () => void) => void
   removeAllListeners: () => void
 }

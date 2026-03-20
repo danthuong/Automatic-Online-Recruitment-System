@@ -9,6 +9,7 @@ import { EssayInput } from '@/renderer/components/questions/EssayInput'
 import { WarningBanner } from '@/renderer/components/proctoring/WarningBanner'
 import { Button } from '@/renderer/components/ui/button'
 import { Badge } from '@/renderer/components/ui/badge'
+import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
 import {
   Dialog,
   DialogContent,
@@ -87,17 +88,23 @@ export function ExamScreen() {
     }
     setIsLoading(false)
     setError(null)
+    setShowSubmitDialog(false)
+    setShowDisqualifyDialog(false)
   }, [questions])
 
   useEffect(() => {
     if (status === 'disqualified') {
       setShowDisqualifyDialog(true)
+    } else {
+      setShowDisqualifyDialog(false)
     }
   }, [status])
 
   useEffect(() => {
     if (showWarningDialog) {
       setShowSubmitDialog(true)
+    } else {
+      setShowSubmitDialog(false)
     }
   }, [showWarningDialog])
 
@@ -148,6 +155,47 @@ export function ExamScreen() {
           addStrike('Multiple monitors detected')
         }
       })
+      
+      const unsubShortcut = window.electronEvents?.onShortcutBlocked((shortcut) => {
+        console.log(`[ExamScreen] Shortcut blocked: ${shortcut}`)
+        
+        addTimelineEvent({
+          timestamp: new Date(),
+          type: 'warning',
+          title: 'Shortcut Blocked',
+          details: `Attempted shortcut: ${shortcut}`,
+          severity: 'warning',
+        })
+        
+        addWarning({
+          type: 'major',
+          message: `Forbidden shortcut detected: ${shortcut}`,
+        })
+        
+        addStrike(`Forbidden shortcut: ${shortcut}`)
+        
+        window.electronAPI?.exam.getWindowBounds().then(() => {
+          console.log('[ExamScreen] Attempting to refocus window')
+        })
+      })
+      
+      const unsubBlur = window.electronEvents?.onFocusLost(() => {
+        console.log('[ExamScreen] Focus lost detected')
+        
+        addTimelineEvent({
+          timestamp: new Date(),
+          type: 'warning',
+          title: 'Focus Lost',
+          details: 'Window lost focus - possible Alt+Tab attempt',
+          severity: 'warning',
+        })
+      })
+      
+      return () => {
+        tracker.stop()
+        unsubShortcut?.()
+        unsubBlur?.()
+      }
     }
 
     return () => {
@@ -190,7 +238,7 @@ export function ExamScreen() {
     setShowSubmitDialog(false)
   }
 
-  const handleViewResults = () => {
+  const handleSubmitAnyway = () => {
     dismissWarningDialog()
     setShowSubmitDialog(false)
     handleSubmit()
@@ -384,6 +432,9 @@ export function ExamScreen() {
                 <PanelRightOpen className="w-4 h-4" />
               )}
             </Button>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle />
           </div>
         </div>
 
@@ -565,7 +616,7 @@ export function ExamScreen() {
       </div>
 
       {/* Strike Warning Dialog */}
-      <Dialog open={showSubmitDialog && strikeCount > 0 && strikeCount < 3} onOpenChange={() => {}}>
+      <Dialog open={showSubmitDialog && strikeCount > 0 && strikeCount < 3 && !showDisqualifyDialog} onOpenChange={(open) => !open && handleWarningDismiss()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
@@ -587,12 +638,12 @@ export function ExamScreen() {
               After 3 warnings, you will be <strong>disqualified</strong> from the exam.
             </p>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={handleWarningDismiss}>
               Continue Exam
             </Button>
-            <Button variant="destructive" onClick={handleViewResults}>
-              View Results
+            <Button variant="default" onClick={handleSubmitAnyway}>
+              Submit Anyway
             </Button>
           </DialogFooter>
         </DialogContent>

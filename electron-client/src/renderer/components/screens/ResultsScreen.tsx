@@ -5,6 +5,7 @@ import { Badge } from '@/renderer/components/ui/badge'
 import { FeedbackPanel } from '@/renderer/components/ai/FeedbackPanel'
 import { useExamStore } from '@/renderer/store/examStore'
 import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
+import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
 import { cn } from '@/renderer/lib/utils'
 import { useTheme } from '@/renderer/hooks/useTheme'
 import { 
@@ -29,9 +30,10 @@ export function ResultsScreen() {
     disqualificationReason, 
     strikeCount, 
     reset,
-    examStartTime,
-    examEndTime,
+    startTime,
   } = useExamStore()
+  const examStartTime = startTime
+  const examEndTime = new Date()
   const { theme } = useTheme()
   
   const isDisqualified = !!disqualificationReason
@@ -127,15 +129,18 @@ export function ResultsScreen() {
               HCMUT Recruitment
             </span>
           </div>
-          <Badge 
-            variant="outline" 
-            className={cn(
-              "px-3 py-1",
-              theme === 'dark' ? 'bg-secondary text-slate-300' : 'bg-slate-100 text-slate-600'
-            )}
-          >
-            Results
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "px-3 py-1",
+                theme === 'dark' ? 'bg-secondary text-slate-300' : 'bg-slate-100 text-slate-600'
+              )}
+            >
+              Results
+            </Badge>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
