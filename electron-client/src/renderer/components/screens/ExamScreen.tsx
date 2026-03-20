@@ -38,40 +38,17 @@ import {
 
 const DEFAULT_LANGUAGE: Language = 'python'
 
-// Asian-inspired animation variants
-const fabricEasing = [0.22, 0.61, 0.36, 1] as const
-
-const questionVariants = {
-  hidden: { opacity: 0, x: 20 },
+// Simple fade animation variants
+const fadeVariants = {
+  hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    x: 0,
     transition: {
-      duration: 0.4,
-      ease: fabricEasing,
+      duration: 0.3,
+      ease: 'easeOut',
     },
   },
-  exit: { opacity: 0, x: -20 },
-}
-
-const panelVariants = {
-  hidden: { opacity: 0, width: 0 },
-  visible: {
-    opacity: 1,
-    width: 320,
-    transition: {
-      duration: 0.5,
-      ease: fabricEasing,
-    },
-  },
-  exit: {
-    opacity: 0,
-    width: 0,
-    transition: {
-      duration: 0.4,
-      ease: fabricEasing,
-    },
-  },
+  exit: { opacity: 0 },
 }
 
 function getStarterCode(question: any, language: Language): string {
@@ -531,120 +508,106 @@ export function ExamScreen() {
 
         {/* Main Editor Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* Question Content - Asian paper-slide animation */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentQuestion?.id}
-              variants={questionVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="max-w-4xl mx-auto space-y-6"
-            >
-              {/* Question Header */}
-              <div className={cn(
-                "rounded-xl border p-6",
-                theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
-              )}>
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge 
-                        variant="outline"
+              {/* Question Content */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentQuestion?.id}
+                  variants={fadeVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="max-w-4xl mx-auto space-y-6"
+                >
+                  {/* Question Header */}
+                  <div className="bg-card border border-border rounded-lg p-6">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Badge 
+                            variant="outline"
+                            className={cn(
+                              currentQuestion?.difficulty === 'easy' 
+                                ? 'bg-green-100 text-green-800 border-green-200' 
+                                : currentQuestion?.difficulty === 'medium' 
+                                  ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                  : 'bg-red-100 text-red-800 border-red-200'
+                            )}
+                          >
+                            {currentQuestion?.difficulty}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {currentQuestion?.title}
+                          </span>
+                        </div>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          Question {currentQuestionIndex + 1}
+                        </h2>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleFlag(currentQuestion?.id || '')}
                         className={cn(
-                          currentQuestion?.difficulty === 'easy' 
-                            ? 'bg-green-50 text-green-600 border-green-200' 
-                            : currentQuestion?.difficulty === 'medium' 
-                              ? 'bg-amber-50 text-amber-600 border-amber-200'
-                              : 'bg-red-50 text-red-600 border-red-200'
+                          'gap-2',
+                          flagged.has(currentQuestion?.id || '') && 'text-amber-600 bg-amber-50'
                         )}
                       >
-                        {currentQuestion?.difficulty}
-                      </Badge>
-                      <span className={cn(
-                        "text-sm",
-                        theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                      )}>
-                        {currentQuestion?.title}
-                      </span>
+                        <Flag className="w-4 h-4" />
+                        {flagged.has(currentQuestion?.id || '') ? 'Flagged' : 'Flag'}
+                      </Button>
                     </div>
-                    <h2 className={cn(
-                      "text-xl font-semibold",
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    )}>
-                      Question {currentQuestionIndex + 1}
-                    </h2>
+
+                    {/* Question Body */}
+                    {renderQuestion()}
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleFlag(currentQuestion?.id || '')}
-                    className={cn(
-                      'gap-2',
-                      flagged.has(currentQuestion?.id || '') && 'text-amber-600 bg-amber-50'
+                  {/* Navigation */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentQuestion(Math.max(0, currentQuestionIndex - 1))}
+                      disabled={currentQuestionIndex === 0}
+                      className="gap-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+
+                    {currentQuestionIndex === questions.length - 1 ? (
+                      <Button
+                        onClick={() => setShowSubmitDialog(true)}
+                        className="gap-2"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit Exam
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => setCurrentQuestion(currentQuestionIndex + 1)}
+                        className="gap-2"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
                     )}
-                  >
-                    <Flag className="w-4 h-4" />
-                    {flagged.has(currentQuestion?.id || '') ? 'Flagged' : 'Flag'}
-                  </Button>
-                </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </main>
 
-                {/* Question Body */}
-                {renderQuestion()}
-              </div>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentQuestion(Math.max(0, currentQuestionIndex - 1))}
-                  disabled={currentQuestionIndex === 0}
-                  className="gap-2"
+            {/* AI Panel */}
+            <AnimatePresence>
+              {showAIPanel && (
+                <motion.aside
+                  variants={fadeVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="border-l border-border bg-card overflow-hidden"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-
-                {currentQuestionIndex === questions.length - 1 ? (
-                  <Button
-                    onClick={() => setShowSubmitDialog(true)}
-                    className="gap-2"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit Exam
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => setCurrentQuestion(currentQuestionIndex + 1)}
-                    className="gap-2"
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </main>
-
-        {/* AI Panel - Asian fabric unfold animation */}
-        <AnimatePresence>
-          {showAIPanel && (
-            <motion.aside
-              variants={panelVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className={cn(
-                "border-l overflow-hidden",
-                theme === 'dark' 
-                  ? 'bg-card/30 border-border backdrop-blur-sm' 
-                  : 'bg-white border-slate-200'
-              )}
-            >
-              <div className="h-full p-4">
-                <InterviewerChat questionId={currentQuestion?.id || ''} />
+                  <div className="h-full p-4">
+                    <InterviewerChat questionId={currentQuestion?.id || ''} />
               </div>
             </motion.aside>
           )}

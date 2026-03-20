@@ -13,44 +13,6 @@ import {
   Terminal,
   CheckCircle,
 } from 'lucide-react'
-import { useTheme } from '@/renderer/hooks/useTheme'
-
-// Asian-inspired animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
-    },
-  },
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, scale: 0.98, y: 20 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
-    },
-  },
-}
 
 export function LoginScreen() {
   const [testId, setTestId] = useState('')
@@ -58,7 +20,6 @@ export function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { setLogin, setCandidateName } = useExamStore()
-  const { theme } = useTheme()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,15 +43,12 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="w-full px-6 py-4 flex items-center justify-between">
+      <header className="w-full px-6 py-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-3">
           <IntroLogo size={36} />
-          <span className={cn(
-            "text-lg font-semibold",
-            theme === 'dark' ? 'text-white' : 'text-slate-900'
-          )}>
+          <span className="text-lg font-semibold text-foreground">
             HCMUT Recruitment
           </span>
         </div>
@@ -100,53 +58,31 @@ export function LoginScreen() {
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          {/* Login Card */}
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className={cn(
-              "rounded-xl border p-8",
-              theme === 'dark' 
-                ? 'bg-card border-border' 
-                : 'bg-white border-slate-200'
-            )}
-            style={{
-              boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
-            }}
-          >
+          {/* Login Card - Clean, professional */}
+          <div className="bg-card border border-border rounded-lg p-8 shadow-soft">
             {/* Logo & Title */}
-            <motion.div variants={itemVariants} className="text-center mb-8">
+            <div className="text-center mb-8">
               <div className="flex justify-center mb-4">
-                <IntroLogo size={80} />
+                <IntroLogo size={64} />
               </div>
-              <h1 className={cn(
-                "text-2xl font-semibold",
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              )}>
+              <h1 className="text-2xl font-semibold text-foreground">
                 Welcome Back
               </h1>
-              <p className={cn(
-                "mt-2 text-sm",
-                theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-              )}>
+              <p className="mt-2 text-sm text-muted-foreground">
                 Enter your credentials to begin your assessment
               </p>
-            </motion.div>
+            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Test ID */}
-              <motion.div variants={itemVariants} className="space-y-2">
-                <label className={cn(
-                  "text-sm font-medium flex items-center gap-2",
-                  theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
-                )}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-primary" />
                   Test ID
                 </label>
@@ -158,14 +94,11 @@ export function LoginScreen() {
                   disabled={isLoading}
                   className="h-11"
                 />
-              </motion.div>
+              </div>
 
               {/* Candidate ID */}
-              <motion.div variants={itemVariants} className="space-y-2">
-                <label className={cn(
-                  "text-sm font-medium flex items-center gap-2",
-                  theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
-                )}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <User className="w-4 h-4 text-primary" />
                   Candidate ID
                 </label>
@@ -177,20 +110,14 @@ export function LoginScreen() {
                   disabled={isLoading}
                   className="h-11"
                 />
-              </motion.div>
+              </div>
 
               {/* Error Message */}
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                  className={cn(
-                    "p-4 rounded-lg text-sm flex items-center gap-3",
-                    theme === 'dark'
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      : 'bg-red-50 text-red-600 border border-red-200'
-                  )}
+                  className="p-4 rounded-lg text-sm flex items-center gap-3 bg-destructive/10 text-destructive border border-destructive/20"
                 >
                   <Lock className="w-4 h-4 flex-shrink-0" />
                   {error}
@@ -198,7 +125,6 @@ export function LoginScreen() {
               )}
 
               {/* Submit Button */}
-              <motion.div variants={itemVariants}>
               <Button
                 type="submit"
                 className="w-full h-11 text-sm font-medium"
@@ -213,18 +139,11 @@ export function LoginScreen() {
                   'Begin Assessment'
                 )}
               </Button>
-              </motion.div>
             </form>
 
             {/* Security Info */}
-            <motion.div variants={itemVariants} className={cn(
-              "mt-8 pt-6 border-t space-y-4",
-              theme === 'dark' ? 'border-border' : 'border-slate-200'
-            )}>
-              <div className={cn(
-                "flex items-center justify-center gap-6 text-xs",
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-500'
-              )}>
+            <div className="mt-8 pt-6 border-t border-border space-y-4">
+              <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5" />
                   <span>Encrypted</span>
@@ -239,25 +158,16 @@ export function LoginScreen() {
                 </div>
               </div>
               
-              <p className={cn(
-                "text-center text-xs",
-                theme === 'dark' ? 'text-slate-600' : 'text-slate-500'
-              )}>
+              <p className="text-center text-xs text-muted-foreground">
                 By continuing, you agree to AI-powered proctoring during your assessment
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
-          {/* Footer Info */}
-          <motion.p 
-            variants={itemVariants}
-            className={cn(
-              "text-center text-xs mt-6",
-              theme === 'dark' ? 'text-slate-600' : 'text-slate-500'
-            )}
-          >
+          {/* Footer */}
+          <p className="text-center text-xs mt-6 text-muted-foreground">
             Ho Chi Minh City University of Technology
-          </motion.p>
+          </p>
         </motion.div>
       </main>
     </div>

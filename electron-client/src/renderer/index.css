@@ -4,33 +4,33 @@
 
 @layer base {
   :root {
-    /* Asian Minimal - Clean Light Theme */
-    --background: 220 20% 99%;
-    --foreground: 222 47% 11%;
+    /* Professional Neutral Light Theme */
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 20% 10%;
 
-    /* HCMUT Blue - Asian Calm */
-    --primary: 212 90% 48%;
+    /* Indigo-500 - Professional, Balanced */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary-foreground: 220 20% 10%;
 
     --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 45%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent-foreground: 220 20% 10%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 70% 38%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
@@ -38,69 +38,46 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 212 90% 48%;
+    --ring: 239 84% 67%;
     --radius: 0.5rem;
-
-    /* Surface colors */
-    --surface-elevated: 0 0% 100%;
-    --surface-muted: 220 14% 96%;
-
-    /* Asian-inspired easing curves */
-    --ease-asian: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-fabric: cubic-bezier(0.22, 0.61, 0.36, 1);
-    --ease-paper: cubic-bezier(0.4, 0, 0.6, 1);
-
-    /* Timing */
-    --duration-fast: 150ms;
-    --duration-normal: 250ms;
-    --duration-slow: 400ms;
-    --duration-slower: 600ms;
-
-    /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
   .dark {
-    /* Asian Minimal - Deep Dark Theme */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    /* Professional Neutral Dark Theme */
+    --background: 220 21% 7%;
+    --foreground: 210 17% 95%;
 
-    --card: 222 30% 9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 21% 11%;
+    --card-foreground: 210 17% 95%;
 
-    --popover: 222 30% 9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 21% 11%;
+    --popover-foreground: 210 17% 95%;
 
-    /* HCMUT Blue - Softer for dark */
-    --primary: 212 90% 55%;
+    /* Indigo-500 - Softer for dark mode */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 30% 12%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 220 18% 15%;
+    --secondary-foreground: 210 17% 90%;
 
-    --muted: 222 20% 15%;
-    --muted-foreground: 215 20% 60%;
+    --muted: 220 18% 15%;
+    --muted-foreground: 215 14% 60%;
 
-    --accent: 222 30% 15%;
-    --accent-foreground: 210 40% 90%;
+    --accent: 220 18% 18%;
+    --accent-foreground: 210 17% 90%;
 
-    --destructive: 0 62% 55%;
+    --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
+    --success: 142 68% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 222 20% 18%;
-    --input: 222 20% 18%;
-    --ring: 212 90% 55%;
-
-    /* Surface colors */
-    --surface-elevated: 222 30% 11%;
-    --surface-muted: 222 20% 12%;
+    --border: 220 18% 20%;
+    --input: 220 18% 20%;
+    --ring: 239 84% 67%;
   }
 }
 
@@ -111,58 +88,45 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   html {
-    transition: background-color var(--duration-normal) var(--ease-asian), color var(--duration-normal) var(--ease-asian);
+    scroll-behavior: smooth;
   }
 
   code, pre, kbd {
-    font-family: var(--font-mono);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
 }
 
 @layer components {
-  /* ========================================
-     ASIAN-INSPIRED CARD STYLES
-     Soft shadows, subtle hover
-     ======================================== */
-  
+  /* Professional Card - Soft, Clean */
   .card-professional {
     @apply bg-card border border-border rounded-lg;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-    transition: box-shadow var(--duration-normal) var(--ease-asian), transform var(--duration-normal) var(--ease-asian);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: box-shadow 200ms ease;
   }
 
   .card-professional:hover {
-    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04);
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.08);
   }
 
-  .card-elevated {
-    @apply bg-card border border-border rounded-lg;
-    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04);
-  }
-
-  /* ========================================
-     ASIAN-INSPIRED BUTTON BASE
-     Subtle hover, soft focus
-     ======================================== */
-  
+  /* Professional Button - Solid Indigo */
   .btn-primary {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply bg-primary text-primary-foreground;
     @apply hover:opacity-90;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all var(--duration-normal) var(--ease-asian);
+    transition: all 200ms ease;
   }
 
   .btn-primary:hover {
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
 
   .btn-primary:active {
@@ -173,95 +137,53 @@
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply bg-secondary text-secondary-foreground;
     @apply hover:opacity-80;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all var(--duration-normal) var(--ease-asian);
-  }
-
-  .btn-secondary:hover {
-    transform: scale(1.02);
-  }
-
-  .btn-secondary:active {
-    transform: scale(0.99);
+    transition: all 200ms ease;
   }
 
   .btn-outline {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply border border-input bg-transparent;
     @apply hover:bg-accent hover:text-accent-foreground;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all var(--duration-normal) var(--ease-asian);
-  }
-
-  .btn-outline:hover {
-    transform: scale(1.02);
-  }
-
-  .btn-outline:active {
-    transform: scale(0.99);
+    transition: all 200ms ease;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium;
     @apply hover:bg-accent hover:text-accent-foreground;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    transition: all var(--duration-normal) var(--ease-asian);
+    transition: all 200ms ease;
   }
 
-  .btn-ghost:hover {
-    transform: scale(1.02);
-  }
-
-  .btn-ghost:active {
-    transform: scale(0.99);
-  }
-
-  /* ========================================
-     ASIAN-INSPIRED INPUT
-     Soft focus, subtle transitions
-     ======================================== */
-  
+  /* Professional Input - Clean */
   .input-professional {
     @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm;
     @apply placeholder:text-muted-foreground;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
-    transition: border-color var(--duration-normal) var(--ease-asian), box-shadow var(--duration-normal) var(--ease-asian);
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
 
-  /* ========================================
-     ASIAN-INSPIRED PROGRESS
-     Smooth, gentle
-     ======================================== */
-  
+  /* Progress Bar - Simple Indigo */
   .progress-professional {
-    @apply h-2 w-full overflow-hidden rounded-full bg-muted;
+    @apply relative w-full overflow-hidden rounded-full bg-secondary;
   }
 
   .progress-professional-bar {
-    @apply h-full;
-    transition: width var(--duration-slow) var(--ease-asian);
+    @apply h-full transition-all duration-300 ease;
   }
 
-  /* ========================================
-     ASIAN-INSPIRED BADGE
-     Soft edges, subtle
-     ======================================== */
-  
+  /* Badge - Clean, Minimal */
   .badge-professional {
     @apply inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium;
-    @apply transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2;
+    @apply transition-colors;
   }
 
-  /* ========================================
-     ASIAN-INSPIRED SCROLLBAR
-     Subtle, refined
-     ======================================== */
-  
+  /* Scrollbar - Subtle */
   .scrollbar-professional {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
@@ -277,79 +199,36 @@
   }
 
   .scrollbar-professional::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted) / 0.5);
+    background-color: hsl(var(--muted));
     border-radius: 3px;
   }
 
   .scrollbar-professional::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
 @layer utilities {
-  /* ========================================
-     FOCUS RING UTILITIES
-     ======================================== */
-  
+  /* Focus Ring - Soft */
   .focus-ring {
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
-  /* ========================================
-     TEXT UTILITIES
-     ======================================== */
-  
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* ========================================
-     CONTAINER UTILITIES
-     ======================================== */
-  
-  .container-professional {
-    @apply mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8;
-  }
-
-  /* ========================================
-     ASIAN-INSPIRED ANIMATION UTILITIES
-     Slow, smooth, elegant
-     ======================================== */
-  
+  /* Animation Utilities - Slow, Smooth */
   .animate-fade-in {
-    animation: fadeIn var(--duration-slow) var(--ease-asian);
+    animation: fadeIn 400ms ease-out forwards;
   }
 
   .animate-fade-out {
-    animation: fadeOut var(--duration-normal) var(--ease-asian);
+    animation: fadeOut 300ms ease-in forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp var(--duration-slow) var(--ease-fabric);
+    animation: slideUp 400ms ease-out forwards;
   }
 
   .animate-slide-down {
-    animation: slideDown var(--duration-normal) var(--ease-fabric);
-  }
-
-  .animate-scale-in {
-    animation: scaleIn var(--duration-normal) var(--ease-asian);
-  }
-
-  .animate-ink-spread {
-    animation: inkSpread var(--duration-slower) var(--ease-asian);
-  }
-
-  .animate-fabric-unfold {
-    animation: fabricUnfold var(--duration-slow) var(--ease-fabric);
-  }
-
-  .animate-paper-slide {
-    animation: paperSlide var(--duration-normal) var(--ease-asian);
-  }
-
-  .animate-gentle-fade {
-    animation: gentleFade var(--duration-slow) var(--ease-asian);
+    animation: slideDown 300ms ease-out forwards;
   }
 
   @keyframes fadeIn {
@@ -371,63 +250,28 @@
     from { opacity: 0; transform: translateY(-16px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes inkSpread {
-    0% { opacity: 0; transform: scale(0.96); }
-    100% { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes fabricUnfold {
-    0% { opacity: 0; transform: translateY(16px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes paperSlide {
-    0% { opacity: 0; transform: translateX(-8px); }
-    100% { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes gentleFade {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-
-  /* ========================================
-     SELECTION
-     ======================================== */
-  
-  ::selection {
-    background-color: hsl(var(--primary) / 0.15);
-  }
 }
 
 /* ========================================
-   INTRO ANIMATION STYLES
-   Asian-inspired, calm, elegant
+   INTRO ANIMATION - Stroke Drawing
    ======================================== */
 
-/* Stroke drawing animation - refined */
 .stroke-draw {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  animation: strokeDraw 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: strokeDraw 1.2s ease-out forwards;
 }
 
 .stroke-draw-delay-1 {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: strokeDraw 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+  animation: strokeDraw 1.2s ease-out 0.2s forwards;
 }
 
 .stroke-draw-delay-2 {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: strokeDraw 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+  animation: strokeDraw 1.2s ease-out 0.4s forwards;
+}
+
+.stroke-draw-delay-3 {
+  animation: strokeDraw 1.2s ease-out 0.6s forwards;
 }
 
 @keyframes strokeDraw {
@@ -436,65 +280,44 @@
   }
 }
 
-/* Lotus bloom animation - slower, more elegant */
-.lotus-bloom {
-  transform-origin: center;
+/* Logo fill animation - fade in after stroke */
+.logo-fill {
   opacity: 0;
-  animation: lotusBloom 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: logoFill 600ms ease-out forwards;
   animation-delay: 1s;
 }
 
-@keyframes lotusBloom {
-  0% {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes logoFill {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Text fade in - fabric unfold effect */
+/* Text fade in - slow, elegant */
 .text-fade-in {
   opacity: 0;
-  animation: textFadeIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-  animation-delay: 1.8s;
+  animation: textFadeIn 500ms ease-out forwards;
+  animation-delay: 1.4s;
 }
 
 @keyframes textFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Subtle breathing effect for logo - very gentle */
-.logo-breathe {
-  animation: breathe 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  animation-delay: 2.5s;
+/* Progress bar - simple, clean */
+.progress-fill {
+  animation: progressFill linear forwards;
 }
 
-@keyframes breathe {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.88;
-  }
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: 100%; }
 }
 
-/* Loading dots - slower, more refined */
+/* Loading dots - subtle */
 .loading-dots {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
 }
 
 .loading-dots span {
@@ -502,7 +325,7 @@
   height: 4px;
   border-radius: 50%;
   background-color: currentColor;
-  animation: loadingDot 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: loadingDot 1.4s ease-in-out infinite;
 }
 
 .loading-dots span:nth-child(1) {
@@ -519,7 +342,7 @@
 
 @keyframes loadingDot {
   0%, 80%, 100% {
-    opacity: 0.25;
+    opacity: 0.3;
     transform: scale(0.9);
   }
   40% {
@@ -528,31 +351,7 @@
   }
 }
 
-/* ========================================
-   GLASS PANEL - Refined
-   ======================================== */
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* ========================================
-   DIALOG OVERLAY - Subtle
-   ======================================== */
-
-.dialog-overlay {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-/* ========================================
-   PROGRESS BAR - Refined
-   ======================================== */
-
-.progress-gradient {
-  background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(212 85% 60%) 100%);
+/* Selection - Indigo tint */
+::selection {
+  background-color: hsl(var(--primary) / 0.15);
 }
