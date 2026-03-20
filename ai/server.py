@@ -313,8 +313,8 @@ if __name__ == "__main__":
         socket_app,
         host="0.0.0.0",
         port=port,
-        ssl_keyfile="key.pem",
-        ssl_certfile="cert.pem",
+        ssl_keyfile=os.path.join(CURRENT_DIR, "key.pem"),
+        ssl_certfile=os.path.join(CURRENT_DIR, "cert.pem"),
         reload=False,
         log_level="info",
     )

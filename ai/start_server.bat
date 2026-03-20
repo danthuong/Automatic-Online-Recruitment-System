@@ -8,11 +8,13 @@ echo   AI Proctoring Server
 echo ================================================
 echo.
 
-cd /d "%~dp0ai"
+cd /d "%~dp0"
 
-if exist "..\venv\Scripts\activate.bat" (
+if exist "venv\Scripts\activate.bat" (
     echo [INFO] Activating virtual environment...
-    call "..\venv\Scripts\activate.bat"
+    call venv\Scripts\activate.bat
+) else (
+    echo [WARN] Virtual environment not found. Using system Python.
 )
 
 echo [INFO] Checking dependencies...
@@ -24,13 +26,13 @@ echo   Starting AI Server...
 echo ================================================
 echo.
 echo   Open your browser and go to:
-echo   - http://localhost:8765/phone   (for phone camera page)
-echo   - http://localhost:8765/qr      (QR code only)
+echo   - https://localhost:8765/phone   (for phone camera page)
+echo   - https://localhost:8765/qr      (QR code only)
 echo.
 echo   Waiting for connections...
 echo ================================================
 echo.
 
-python server.py
+python ai\server.py
 
 pause

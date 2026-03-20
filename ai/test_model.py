@@ -70,7 +70,11 @@ class GestureDetector:
         self.feature_names = feature_names
 
     def _init_mediapipe(self):
-        base_options = mp_base_options.BaseOptions(model_asset_path=self.hand_task_path)
+        if not os.path.exists(self.hand_task_path):
+            raise FileNotFoundError(f"Hand task model not found at: {self.hand_task_path}")
+        with open(self.hand_task_path, 'rb') as f:
+            model_data = f.read()
+        base_options = mp_base_options.BaseOptions(model_asset_buffer=model_data)
         options = HandLandmarkerOptions(
             base_options=base_options,
             running_mode=RunningMode.VIDEO,

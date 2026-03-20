@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+import os
 from collections import deque
 from mediapipe.tasks.python.vision import FaceLandmarker, FaceLandmarkerOptions, RunningMode
 from mediapipe.tasks.python.core import base_options as mp_base_options
@@ -52,7 +53,11 @@ class ProctoringEngine:
         self.is_alerting = False
 
     def initialize(self):
-        base_options = mp_base_options.BaseOptions(model_asset_path=self.model_path)
+        if not os.path.exists(self.model_path):
+            raise FileNotFoundError(f"Model not found at: {self.model_path}")
+        with open(self.model_path, 'rb') as f:
+            model_data = f.read()
+        base_options = mp_base_options.BaseOptions(model_asset_buffer=model_data)
         options = FaceLandmarkerOptions(
             base_options=base_options,
             running_mode=RunningMode.VIDEO,
