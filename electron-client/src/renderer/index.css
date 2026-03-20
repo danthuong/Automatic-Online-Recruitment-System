@@ -4,18 +4,18 @@
 
 @layer base {
   :root {
-    /* Professional Light Theme - Softer */
-    --background: 220 20% 98%;
-    --foreground: 222 30% 15%;
+    /* Warm Cream Theme - Very Different! */
+    --background: 40 60% 96%;
+    --foreground: 30 30% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 30% 15%;
+    --card: 40 50% 97%;
+    --card-foreground: 30 30% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 30% 15%;
+    --popover: 40 50% 97%;
+    --popover-foreground: 30 30% 15%;
 
-    /* HCMUT Blue - Refined */
-    --primary: 212 90% 48%;
+    /* Asian Rose Gold - Very Different! */
+    --primary: 340 75% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -62,18 +62,18 @@
   }
 
   .dark {
-    /* Professional Dark Theme - Refined */
-    --background: 222 40% 6%;
-    --foreground: 210 30% 96%;
+    /* Deep Purple Theme - Very Different! */
+    --background: 270 40% 8%;
+    --foreground: 0 0% 95%;
 
-    --card: 222 35% 9%;
-    --card-foreground: 210 30% 96%;
+    --card: 270 35% 12%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222 35% 9%;
-    --popover-foreground: 210 30% 96%;
+    --popover: 270 35% 12%;
+    --popover-foreground: 0 0% 95%;
 
-    /* HCMUT Blue - Softer for dark mode */
-    --primary: 212 85% 55%;
+    /* Rose Gold for dark mode */
+    --primary: 340 70% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 30% 12%;

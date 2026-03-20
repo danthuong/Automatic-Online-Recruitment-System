@@ -60,21 +60,34 @@ export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
         <motion.div
           className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${
             theme === 'dark' 
-              ? 'bg-[#060a12]' 
-              : 'bg-[#f8fafc]'
+              ? 'bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900' 
+              : 'bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50'
           }`}
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* Logo Animation - Ink spread effect */}
+          {/* Logo Animation - Floating effect */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={inkSpreadTransition}
+            initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1] }}
             className="relative"
           >
-            <IntroLogo size={180} animated={true} />
+            {/* Floating animation wrapper */}
+            <motion.div
+              animate={{ 
+                y: [0, -15, 0, 15, 0],
+                rotate: [0, 2, 0, -2, 0]
+              }}
+              transition={{ 
+                duration: 4, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+            >
+              <IntroLogo size={180} animated={true} />
+            </motion.div>
           </motion.div>
 
           {/* Text Content - Fabric unfold effect */}
@@ -87,8 +100,8 @@ export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
                 exit={{ opacity: 0, y: -10 }}
                 transition={asianTransition}
               >
-                <h1 className={`text-2xl font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
+                <h1 className={`text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent ${
+                  theme === 'dark' ? '' : ''
                 }`}>
                   HCMUT Recruitment System
                 </h1>
