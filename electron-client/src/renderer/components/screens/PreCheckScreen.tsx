@@ -362,8 +362,8 @@ export function PreCheckScreen() {
                   theme={theme}
                 />
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
 
           {/* Right - Checks & Agreement */}
           <div className="space-y-6">
@@ -539,7 +539,7 @@ export function PreCheckScreen() {
                   I agree to the exam rules and consent to proctoring
                 </span>
               </label>
-            </div>
+            </motion.div>
 
             {/* Start Button */}
             <motion.div variants={itemVariants}>
