@@ -87,8 +87,6 @@
         }
       ],
       "icon": "public/icon.ico"
-    },
-    "codeSign": false,
-    "afterPack": "./scripts/after-pack.js"
+    }
   }
 }
