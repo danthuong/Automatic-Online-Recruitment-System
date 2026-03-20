@@ -268,7 +268,17 @@ export const useExamStore = create<ExamState>((set, get) => ({
       details: 'Candidate began the examination',
       severity: 'info',
     })
-    set({ status: 'exam', startTime: new Date(), proctorStatus: 'active', strikeCount: 0 })
+    set({ 
+      status: 'exam', 
+      startTime: new Date(), 
+      proctorStatus: 'active', 
+      strikeCount: 0,
+      disqualificationReason: null,
+      showWarningDialog: false,
+      lastStrikeReason: null,
+      forbiddenProcesses: [],
+      devToolsAccessed: false,
+    })
   },
   
   submitExam: () => {

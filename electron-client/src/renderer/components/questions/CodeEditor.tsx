@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/renderer/components/ui/card'
 import { cn } from '@/renderer/lib/utils'
-import { Code, RotateCcw, Copy, Check, Play, ChevronDown } from 'lucide-react'
+import { Code, RotateCcw, Play, ChevronDown } from 'lucide-react'
 import { Button } from '@/renderer/components/ui/button'
 import type { Language } from '@/renderer/store/examStore'
 
@@ -57,7 +57,6 @@ export function CodeEditor({
   className,
 }: CodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [copied, setCopied] = useState(false)
   const [lineCount, setLineCount] = useState(1)
   const [showLangDropdown, setShowLangDropdown] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
@@ -102,12 +101,6 @@ export function CodeEditor({
         }
       }, 0)
     }
-  }
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(value)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -163,7 +156,7 @@ export function CodeEditor({
             )}
             {onRunTests && (
               <Button
-                variant="success"
+                variant="default"
                 size="sm"
                 onClick={handleRunTests}
                 disabled={isRunning}
@@ -174,18 +167,9 @@ export function CodeEditor({
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
-                Run Tests
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopy}
-              className="flex items-center gap-2"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy'}
+              Run Tests
             </Button>
+            )}
             {onReset && (
               <Button
                 variant="outline"

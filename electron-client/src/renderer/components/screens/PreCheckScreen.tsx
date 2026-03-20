@@ -4,6 +4,7 @@ import { Button } from '@/renderer/components/ui/button'
 import { MediaCapture } from '@/renderer/components/proctoring/MediaCapture'
 import { useExamStore } from '@/renderer/store/examStore'
 import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
+import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
 import { cn } from '@/renderer/lib/utils'
 import { 
   Shield, 
@@ -208,14 +209,17 @@ export function PreCheckScreen() {
               </div>
             </div>
             
-            <div className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium border",
-              theme === 'dark' 
-                ? 'bg-secondary text-slate-300 border-border' 
-                : 'bg-slate-100 text-slate-600 border-slate-200'
-            )}>
-              <span className={theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}>Test:</span>
-              <span className="ml-2 font-mono">{testId || 'N/A'}</span>
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium border",
+                theme === 'dark' 
+                  ? 'bg-secondary text-slate-300 border-border' 
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              )}>
+                <span className={theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}>Test:</span>
+                <span className="ml-2 font-mono">{testId || 'N/A'}</span>
+              </div>
+              <ThemeToggle />
             </div>
           </div>
 
