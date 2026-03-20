@@ -268,25 +268,26 @@ impl Solution {
 
 const totalTime = 60 * 60
 
+// Asian-inspired page transitions - slow, elegant, no bounce
 const pageVariants: Variants = {
   initial: {
     opacity: 0,
-    y: 20,
+    y: 16,
   },
   enter: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
-      ease: 'easeOut' as const,
+      duration: 0.5,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
     },
   },
   exit: {
     opacity: 0,
-    y: -20,
+    y: -16,
     transition: {
-      duration: 0.3,
-      ease: 'easeIn' as const,
+      duration: 0.4,
+      ease: [0.4, 0, 0.2, 1] as const, // Asian easing
     },
   },
 }

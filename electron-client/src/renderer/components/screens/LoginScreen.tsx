@@ -15,6 +15,43 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/renderer/hooks/useTheme'
 
+// Asian-inspired animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
+    },
+  },
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.98, y: 20 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
+    },
+  },
+}
+
 export function LoginScreen() {
   const [testId, setTestId] = useState('')
   const [candidateId, setCandidateId] = useState('')
@@ -63,20 +100,28 @@ export function LoginScreen() {
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
           className="w-full max-w-md"
         >
           {/* Login Card */}
-          <div className={cn(
-            "rounded-xl border shadow-sm p-8",
-            theme === 'dark' 
-              ? 'bg-card border-border' 
-              : 'bg-white border-slate-200'
-          )}>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className={cn(
+              "rounded-xl border p-8",
+              theme === 'dark' 
+                ? 'bg-card border-border' 
+                : 'bg-white border-slate-200'
+            )}
+            style={{
+              boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
+            }}
+          >
             {/* Logo & Title */}
-            <div className="text-center mb-8">
+            <motion.div variants={itemVariants} className="text-center mb-8">
               <div className="flex justify-center mb-4">
                 <IntroLogo size={80} />
               </div>
@@ -92,12 +137,12 @@ export function LoginScreen() {
               )}>
                 Enter your credentials to begin your assessment
               </p>
-            </div>
+            </motion.div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Test ID */}
-              <div className="space-y-2">
+              <motion.div variants={itemVariants} className="space-y-2">
                 <label className={cn(
                   "text-sm font-medium flex items-center gap-2",
                   theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
@@ -113,10 +158,10 @@ export function LoginScreen() {
                   disabled={isLoading}
                   className="h-11"
                 />
-              </div>
+              </motion.div>
 
               {/* Candidate ID */}
-              <div className="space-y-2">
+              <motion.div variants={itemVariants} className="space-y-2">
                 <label className={cn(
                   "text-sm font-medium flex items-center gap-2",
                   theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
@@ -132,13 +177,14 @@ export function LoginScreen() {
                   disabled={isLoading}
                   className="h-11"
                 />
-              </div>
+              </motion.div>
 
               {/* Error Message */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                   className={cn(
                     "p-4 rounded-lg text-sm flex items-center gap-3",
                     theme === 'dark'
@@ -152,6 +198,7 @@ export function LoginScreen() {
               )}
 
               {/* Submit Button */}
+              <motion.div variants={itemVariants}>
               <Button
                 type="submit"
                 className="w-full h-11 text-sm font-medium"
@@ -166,10 +213,11 @@ export function LoginScreen() {
                   'Begin Assessment'
                 )}
               </Button>
+              </motion.div>
             </form>
 
             {/* Security Info */}
-            <div className={cn(
+            <motion.div variants={itemVariants} className={cn(
               "mt-8 pt-6 border-t space-y-4",
               theme === 'dark' ? 'border-border' : 'border-slate-200'
             )}>
@@ -197,16 +245,19 @@ export function LoginScreen() {
               )}>
                 By continuing, you agree to AI-powered proctoring during your assessment
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Footer Info */}
-          <p className={cn(
-            "text-center text-xs mt-6",
-            theme === 'dark' ? 'text-slate-600' : 'text-slate-500'
-          )}>
+          <motion.p 
+            variants={itemVariants}
+            className={cn(
+              "text-center text-xs mt-6",
+              theme === 'dark' ? 'text-slate-600' : 'text-slate-500'
+            )}
+          >
             Ho Chi Minh City University of Technology
-          </p>
+          </motion.p>
         </motion.div>
       </main>
     </div>

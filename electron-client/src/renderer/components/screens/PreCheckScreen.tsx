@@ -29,6 +29,43 @@ interface ChecklistItem {
   autoCheck?: () => Promise<boolean>
 }
 
+// Asian-inspired animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
+    },
+  },
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.98, y: 20 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
+    },
+  },
+}
+
 export function PreCheckScreen() {
   const { testId, startExam } = useExamStore()
   const mediaStreamRef = useRef<MediaStream | null>(null)
@@ -267,10 +304,15 @@ export function PreCheckScreen() {
       </header>
 
       {/* Main Content */}
-      <div className="px-6 py-8">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="px-6 py-8"
+      >
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8">
           {/* Left - Media Capture */}
-          <div>
+          <motion.div variants={cardVariants}>
             <div className={cn(
               "rounded-xl border p-6 h-full",
               theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
@@ -320,13 +362,13 @@ export function PreCheckScreen() {
                   theme={theme}
                 />
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Right - Checks & Agreement */}
           <div className="space-y-6">
             {/* System Checks */}
-            <div className={cn(
+            <motion.div variants={cardVariants} className={cn(
               "rounded-xl border p-6",
               theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
             )}>
@@ -356,11 +398,13 @@ export function PreCheckScreen() {
               <div className="space-y-3">
                 {checklist
                   .filter((item) => item.id !== 'camera' && item.id !== 'microphone')
-                  .map((item) => {
+                  .map((item, index) => {
                     const Icon = item.icon
                     return (
-                      <div
+                      <motion.div
                         key={item.id}
+                        variants={itemVariants}
+                        custom={index}
                         className={cn(
                           'flex items-center gap-4 p-4 rounded-lg border transition-all',
                           item.status === 'passed' && theme === 'dark' ? 'bg-green-500/5 border-green-500/20' :
@@ -415,14 +459,14 @@ export function PreCheckScreen() {
                         {item.status === 'failed' && (
                           <span className="text-xs font-medium text-red-600">Failed</span>
                         )}
-                      </div>
+                      </motion.div>
                     )
                   })}
               </div>
-            </div>
+            </motion.div>
 
             {/* Agreement */}
-            <div className={cn(
+            <motion.div variants={cardVariants} className={cn(
               "rounded-xl border p-6",
               theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
             )}>
@@ -456,8 +500,10 @@ export function PreCheckScreen() {
                   'Any suspicious behavior will be recorded (3 warnings = disqualification)',
                   'All activities are logged for review',
                 ].map((rule, index) => (
-                  <div 
-                    key={index} 
+                  <motion.div 
+                    key={index}
+                    variants={itemVariants}
+                    custom={index}
                     className={cn(
                       "flex items-start gap-3 p-3 rounded-lg",
                       theme === 'dark' ? 'bg-secondary/30' : 'bg-slate-50'
@@ -470,7 +516,7 @@ export function PreCheckScreen() {
                     )}>
                       {rule}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
@@ -496,30 +542,32 @@ export function PreCheckScreen() {
             </div>
 
             {/* Start Button */}
-            <Button
-              size="lg"
-              className={cn(
-                'w-full h-12 text-sm font-medium',
-                !allPassed && 'opacity-50 cursor-not-allowed'
-              )}
-              disabled={!allPassed}
-              onClick={handleStartExam}
-            >
-              {allPassed ? (
-                <>
-                  Begin Assessment
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Complete All Checks
-                </>
-              )}
-            </Button>
+            <motion.div variants={itemVariants}>
+              <Button
+                size="lg"
+                className={cn(
+                  'w-full h-12 text-sm font-medium',
+                  !allPassed && 'opacity-50 cursor-not-allowed'
+                )}
+                disabled={!allPassed}
+                onClick={handleStartExam}
+              >
+                {allPassed ? (
+                  <>
+                    Begin Assessment
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Complete All Checks
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

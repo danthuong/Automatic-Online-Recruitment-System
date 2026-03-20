@@ -20,6 +20,30 @@ import {
   X,
 } from 'lucide-react'
 
+// Asian-inspired animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+}
+
+const fadeUpVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 0.61, 0.36, 1] as const, // Fabric easing
+    },
+  },
+}
+
 export function ResultsScreen() {
   const { 
     questions, 
@@ -144,14 +168,17 @@ export function ResultsScreen() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Asian gentle fade */}
       <main className="px-6 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="max-w-4xl mx-auto space-y-8"
+        >
           {/* Status Header */}
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            variants={fadeUpVariants}
             className="text-center"
           >
             {/* Status Icon */}
@@ -200,9 +227,7 @@ export function ResultsScreen() {
             <div className="lg:col-span-2 space-y-6">
               {/* Stats Cards */}
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
+                variants={fadeUpVariants}
                 className={cn(
                   "rounded-xl border p-6",
                   theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
@@ -282,9 +307,7 @@ export function ResultsScreen() {
 
               {/* Time Stats */}
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
+                variants={fadeUpVariants}
                 className={cn(
                   "rounded-xl border p-6",
                   theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
@@ -323,8 +346,7 @@ export function ResultsScreen() {
               {/* Warnings/Disqualification */}
               {isDisqualified && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  variants={fadeUpVariants}
                   className={cn(
                     "rounded-xl border p-6",
                     theme === 'dark' 
@@ -396,8 +418,7 @@ export function ResultsScreen() {
 
               {warningCount > 0 && !isDisqualified && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  variants={fadeUpVariants}
                   className={cn(
                     "rounded-xl border p-4",
                     theme === 'dark' 
@@ -431,9 +452,7 @@ export function ResultsScreen() {
 
             {/* Right Column - Details */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
+              variants={fadeUpVariants}
               className={cn(
                 "rounded-xl border p-6 h-fit",
                 theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
@@ -501,7 +520,7 @@ export function ResultsScreen() {
               Download Report
             </Button>
           </motion.div>
-        </div>
+        </motion.div>
       </main>
     </div>
   )

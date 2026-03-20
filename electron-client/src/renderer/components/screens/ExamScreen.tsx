@@ -38,6 +38,42 @@ import {
 
 const DEFAULT_LANGUAGE: Language = 'python'
 
+// Asian-inspired animation variants
+const fabricEasing = [0.22, 0.61, 0.36, 1] as const
+
+const questionVariants = {
+  hidden: { opacity: 0, x: 20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.4,
+      ease: fabricEasing,
+    },
+  },
+  exit: { opacity: 0, x: -20 },
+}
+
+const panelVariants = {
+  hidden: { opacity: 0, width: 0 },
+  visible: {
+    opacity: 1,
+    width: 320,
+    transition: {
+      duration: 0.5,
+      ease: fabricEasing,
+    },
+  },
+  exit: {
+    opacity: 0,
+    width: 0,
+    transition: {
+      duration: 0.4,
+      ease: fabricEasing,
+    },
+  },
+}
+
 function getStarterCode(question: any, language: Language): string {
   if (!question.starterCode) return ''
   if (typeof question.starterCode === 'string') return question.starterCode
@@ -495,14 +531,14 @@ export function ExamScreen() {
 
         {/* Main Editor Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* Question Content */}
+          {/* Question Content - Asian paper-slide animation */}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentQuestion?.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              variants={questionVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               className="max-w-4xl mx-auto space-y-6"
             >
               {/* Question Header */}
@@ -592,14 +628,14 @@ export function ExamScreen() {
           </AnimatePresence>
         </main>
 
-        {/* AI Panel */}
+        {/* AI Panel - Asian fabric unfold animation */}
         <AnimatePresence>
           {showAIPanel && (
             <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              variants={panelVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               className={cn(
                 "border-l overflow-hidden",
                 theme === 'dark' 
