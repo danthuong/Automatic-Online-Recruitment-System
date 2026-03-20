@@ -15,6 +15,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 import socketio
@@ -130,6 +131,12 @@ async def lifespan(app: FastAPI):
             print(f"[AI Server] WARNING: gesture_model.pkl not found at {HAND_MODEL_PATH}")
         if not os.path.exists(HAND_TASK_PATH):
             print(f"[AI Server] WARNING: hand_landmarker.task not found at {HAND_TASK_PATH}")
+
+        if os.path.exists(STATIC_DIR):
+            app.mount("/static", StaticFiles(directory=STATIC_DIR, html=False), name="static")
+            print(f"[AI Server] Static files mounted at /static")
+        else:
+            print(f"[AI Server] WARNING: static directory not found at {STATIC_DIR}")
 
         if os.path.exists(FACE_MODEL_PATH) and os.path.exists(HAND_MODEL_PATH) and os.path.exists(HAND_TASK_PATH):
             proctor_engine = ProctoringEngine(camera_index=0, model_path=FACE_MODEL_PATH)
