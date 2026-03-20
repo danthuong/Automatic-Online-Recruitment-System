@@ -84,7 +84,7 @@ class GestureDetector:
     def process_frame(self, frame, frame_timestamp_ms=0):
         h, w, _ = frame.shape
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = Image(image_format=ImageFormat.SRGB, data=rgb_frame)
+        mp_image = Image(ImageFormat.SRGB, rgb_frame)
         result = self.hand_landmarker.detect_for_video(mp_image, frame_timestamp_ms)
 
         if not result.hand_landmarks:
