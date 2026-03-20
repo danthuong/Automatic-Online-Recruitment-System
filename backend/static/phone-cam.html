@@ -83,6 +83,47 @@
       display: none;
     }
     .front-hint.show { display: block; }
+    .debug-panel {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      margin-top: 16px;
+      padding: 12px;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.7rem;
+      font-family: monospace;
+      display: none;
+    }
+    .debug-panel.show { display: block; }
+    .debug-panel summary {
+      cursor: pointer;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+      font-size: 0.75rem;
+    }
+    .debug-panel summary:hover { color: white; }
+    .log-entry { margin: 2px 0; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); word-break: break-all; }
+    .log-entry.error { color: #ef4444; }
+    .log-entry.success { color: #10b981; }
+    .log-entry.network { color: #60a5fa; }
+    .log-entry.socket { color: #f59e0b; }
+    .log-entry.webrtc { color: #a78bfa; }
+    .log-time { color: rgba(255,255,255,0.3); margin-right: 6px; }
+    .error-detail {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 0.75rem;
+      display: none;
+    }
+    .error-detail.show { display: block; }
+    .error-detail h4 { color: #ef4444; margin-bottom: 8px; }
+    .error-detail p { margin: 4px 0; color: rgba(255,255,255,0.7); word-break: break-all; }
+    .error-detail .key { color: #f59e0b; }
   </style>
 </head>
 <body>
@@ -114,6 +155,20 @@
       Keep your hands visible in the camera frame<br>
       Ensure good lighting for best detection
     </div>
+
+    <div class="error-detail" id="errorDetail">
+      <h4>Connection Error Details</h4>
+      <p><span class="key">Error Message:</span> <span id="errMsg">-</span></p>
+      <p><span class="key">Error Type:</span> <span id="errType">-</span></p>
+      <p><span class="key">HTTP Status:</span> <span id="errHttp">-</span></p>
+      <p><span class="key">Server URL:</span> <span id="errServer">-</span></p>
+      <p><span class="key">Suggestion:</span> <span id="errSuggestion">-</span></p>
+    </div>
+
+    <details class="debug-panel" id="debugPanel">
+      <summary>&#9654; Debug Log (tap to expand)</summary>
+      <div id="logContainer"></div>
+    </details>
   </div>
 
   <script src="/static/socket.io.min.js"></script>
@@ -127,6 +182,14 @@
     const statusEl = document.getElementById('status');
     const statusText = document.getElementById('statusText');
     const frontHint = document.getElementById('frontHint');
+    const debugPanel = document.getElementById('debugPanel');
+    const logContainer = document.getElementById('logContainer');
+    const errorDetail = document.getElementById('errorDetail');
+    const errMsg = document.getElementById('errMsg');
+    const errType = document.getElementById('errType');
+    const errHttp = document.getElementById('errHttp');
+    const errServer = document.getElementById('errServer');
+    const errSuggestion = document.getElementById('errSuggestion');
 
     const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -136,15 +199,32 @@
     let peerConnection = null;
     let localStream = null;
     let socket = null;
+    let lastHttpStatus = null;
 
     function setStatus(state, text) {
       statusEl.className = 'status ' + state;
       statusText.textContent = text;
-      log('STATUS [' + state.toUpperCase() + ']: ' + text);
+      log('STATUS [' + state.toUpperCase() + ']: ' + text, 'status');
     }
 
-    function log(msg) {
-      console.log('[PhoneCam]', msg);
+    function showError(msg, type, httpStatus, suggestion) {
+      errorDetail.classList.add('show');
+      errMsg.textContent = msg || 'Unknown error';
+      errType.textContent = type || 'unknown';
+      errHttp.textContent = httpStatus || 'N/A';
+      errServer.textContent = window.location.origin;
+      errSuggestion.textContent = suggestion || 'Try refreshing the page.';
+      debugPanel.classList.add('show');
+    }
+
+    function log(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.innerHTML = '<span class="log-time">' + time + '</span>' + msg;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      console.log('[PhoneCam][' + type.toUpperCase() + '] ' + msg);
     }
 
     async function startCamera() {
@@ -192,18 +272,29 @@
 
       log('NETWORK: Testing connectivity to ' + serverUrl + '...');
 
-      // First, test basic HTTP connectivity
       try {
         const testResp = await fetch(serverUrl + '/health', { mode: 'cors' });
-        log('NETWORK: /health responded with status: ' + testResp.status);
+        lastHttpStatus = testResp.status;
+        log('NETWORK: /health responded with status: ' + testResp.status, 'network');
+
+        if (testResp.status === 200) {
+          const data = await testResp.json();
+          log('NETWORK: Server OK - proctor=' + data.proctor_loaded + ', gesture=' + data.gesture_loaded, 'success');
+        }
       } catch (err) {
-        log('NETWORK: /health fetch failed: ' + err.name + ' - ' + err.message);
-        log('NETWORK: This means the phone cannot reach the server at all!');
-        setStatus('error', 'Cannot reach server. Check firewall & ensure server is running on same network.');
+        log('NETWORK: /health fetch FAILED: ' + err.name + ' - ' + err.message, 'error');
+        log('NETWORK: This means the phone CANNOT reach the server!', 'error');
+        setStatus('error', 'Cannot reach server. Check firewall & network.');
+        showError(
+          err.name + ': ' + err.message,
+          'Network Error',
+          'Connection refused',
+          '1) Make sure the AI server is running on the PC\n2) Check Windows Firewall allows port 8765\n3) Make sure phone is on same WiFi network'
+        );
         return;
       }
 
-      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/signaling');
+      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/signaling', 'network');
 
       socket = io(socketUrl + '/signaling', {
         transports: ['websocket', 'polling'],
@@ -213,24 +304,42 @@
         timeout: 20000,
       });
 
-      // Log all socket events
       socket.on('connect', async () => {
-        log('SOCKET: Connected! socket.id=' + socket.id);
+        log('SOCKET: Connected! socket.id=' + socket.id, 'success');
+        errorDetail.classList.remove('show');
         setStatus('connecting', 'Connected! Joining exam...');
         socket.emit('phone_join', { type: 'hand_camera', phoneId: socket.id });
       });
 
       socket.on('disconnect', (reason) => {
-        log('SOCKET: Disconnected - reason: ' + reason);
+        log('SOCKET: Disconnected - reason: ' + reason, 'error');
         setStatus('error', 'Disconnected. Refresh to reconnect.');
       });
 
       socket.on('connect_error', (err) => {
-        log('SOCKET: Connection error! ' + err.message);
-        log('SOCKET: Error type: ' + err.type);
-        log('SOCKET: Error description: ' + (err.description || 'none'));
-        log('SOCKET: This means Socket.IO handshake failed.');
-        setStatus('error', 'Cannot connect to server: ' + err.message);
+        log('SOCKET: Connection error! ' + err.message, 'error');
+        log('SOCKET: Error type: ' + (err.type || 'unknown'), 'error');
+        log('SOCKET: HTTP response: ' + (err.context?.response?.status || 'none'), 'error');
+        log('SOCKET: Context: ' + JSON.stringify(err.context || {}), 'error');
+
+        let suggestion = '';
+        if (!err.message && !err.type) {
+          suggestion = 'Server might be running HTTP, not HTTPS. Restart the AI server with the updated code.';
+        } else if (err.message && err.message.includes('certificate')) {
+          suggestion = 'SSL certificate error. Accept the security warning on the browser.';
+        } else if (err.message && err.message.includes('timeout')) {
+          suggestion = 'Connection timed out. Check network firewall.';
+        } else {
+          suggestion = 'Try refreshing the page. If it persists, the server may be down.';
+        }
+
+        setStatus('error', 'Cannot connect to server');
+        showError(
+          err.message || 'Empty error (server rejected connection)',
+          err.type || 'unknown',
+          err.context?.response?.status || lastHttpStatus || 'N/A',
+          suggestion
+        );
       });
 
       socket.on('connect_timeout', () => {
@@ -243,31 +352,31 @@
       });
 
       socket.on('phone_joined', (data) => {
-        log('SOCKET: phone_joined received: ' + JSON.stringify(data));
+        log('SOCKET: phone_joined received: ' + JSON.stringify(data), 'socket');
         setStatus('ready', 'Waiting for exam system...');
       });
 
       socket.on('exam_joined', (data) => {
-        log('SOCKET: exam_joined: ' + JSON.stringify(data));
+        log('SOCKET: exam_joined: ' + JSON.stringify(data), 'socket');
       });
 
       socket.on('exam_ready', () => {
-        log('SOCKET: exam_ready received');
+        log('SOCKET: exam_ready received', 'socket');
         createPeerConnection();
       });
 
       socket.on('offer', async (data) => {
-        log('SOCKET: Received offer, type=' + data.type + ', sdp_len=' + (data.sdp?.length || 0));
+        log('SOCKET: Received offer, type=' + data.type + ', sdp_len=' + (data.sdp?.length || 0), 'socket');
         if (!peerConnection) await createPeerConnection();
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         socket.emit('answer', { sdp: answer.sdp, type: answer.type });
-        log('SOCKET: Answer sent');
+        log('SOCKET: Answer sent', 'socket');
       });
 
       socket.on('answer', async (data) => {
-        log('SOCKET: Received answer');
+        log('SOCKET: Received answer', 'socket');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
       });
 
@@ -275,62 +384,62 @@
         try {
           if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            log('SOCKET: ICE candidate added');
+            log('SOCKET: ICE candidate added', 'socket');
           }
         } catch (err) {
-          log('SOCKET: ICE add error: ' + err.message);
+          log('SOCKET: ICE add error: ' + err.message, 'error');
         }
       });
 
       socket.on('reconnect_attempt', (attempt) => {
-        log('SOCKET: Reconnect attempt #' + attempt);
+        log('SOCKET: Reconnect attempt #' + attempt, 'socket');
         setStatus('connecting', 'Retrying connection...');
       });
 
       socket.on('reconnect_failed', () => {
-        log('SOCKET: Reconnect failed after all attempts');
+        log('SOCKET: Reconnect failed after all attempts', 'error');
         setStatus('error', 'Failed to reconnect. Refresh page.');
       });
     }
 
     async function createPeerConnection() {
-      log('WEBRTC: Creating PeerConnection...');
+      log('WEBRTC: Creating PeerConnection...', 'webrtc');
       peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
       peerConnection.onicecandidate = (e) => {
         if (e.candidate) {
-          log('WEBRTC: ICE candidate generated: ' + e.candidate.type);
+          log('WEBRTC: ICE candidate: ' + e.candidate.type, 'webrtc');
           socket.emit('ice_candidate', { candidate: e.candidate.toJSON() });
         } else {
-          log('WEBRTC: ICE candidate generation complete (null candidate)');
+          log('WEBRTC: ICE gathering complete', 'webrtc');
         }
       };
 
       peerConnection.oniceconnectionstatechange = () => {
-        log('WEBRTC: ICE state changed to: ' + peerConnection.iceConnectionState);
+        log('WEBRTC: ICE state = ' + peerConnection.iceConnectionState, 'webrtc');
         if (peerConnection.iceConnectionState === 'checking') {
           setStatus('connecting', 'Establishing connection...');
         } else if (peerConnection.iceConnectionState === 'connected') {
           setStatus('connected', 'Connected to exam system');
         } else if (peerConnection.iceConnectionState === 'failed') {
-          log('WEBRTC: ICE FAILED - gathering state: ' + peerConnection.iceGatheringState);
-          setStatus('error', 'WebRTC connection failed. Check network/firewall.');
+          log('WEBRTC: ICE FAILED - gathering: ' + peerConnection.iceGatheringState, 'error');
+          setStatus('error', 'WebRTC connection failed.');
         } else if (peerConnection.iceConnectionState === 'disconnected') {
           setStatus('error', 'Connection lost.');
         }
       };
 
       peerConnection.onicegatheringstatechange = () => {
-        log('WEBRTC: ICE gathering state: ' + peerConnection.iceGatheringState);
+        log('WEBRTC: ICE gathering state: ' + peerConnection.iceGatheringState, 'webrtc');
       };
 
       peerConnection.ontrack = (e) => {
-        log('WEBRTC: Received track from peer: ' + e.track.kind);
+        log('WEBRTC: Received track: ' + e.track.kind, 'webrtc');
       };
 
       if (localStream) {
         localStream.getTracks().forEach(track => {
-          log('WEBRTC: Adding track: ' + track.label + ' (' + track.kind + ')');
+          log('WEBRTC: Adding track: ' + track.label + ' (' + track.kind + ')', 'webrtc');
           peerConnection.addTrack(track, localStream);
         });
       }
@@ -345,10 +454,11 @@
     }
 
     async function main() {
-      log('APP: Starting phone camera client...');
-      log('APP: Page URL: ' + window.location.href);
-      log('APP: Protocol: ' + window.location.protocol);
-      log('APP: Origin: ' + window.location.origin);
+      debugPanel.classList.add('show');
+      log('APP: Starting phone camera client...', 'info');
+      log('APP: Page URL: ' + window.location.href, 'info');
+      log('APP: Protocol: ' + window.location.protocol, 'info');
+      log('APP: Origin: ' + window.location.origin, 'info');
 
       setStatus('connecting', 'Starting camera...');
       const stream = await startCamera();
