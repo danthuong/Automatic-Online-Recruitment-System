@@ -73,14 +73,15 @@ Phone opens: http://192.168.x.x:8765/phone
 | `/qr/info` | QR info as JSON (base64 QR, IP, URL) |
 | `/health` | Server health check |
 | `/process_frame` | AI processing (existing) |
-| `/signaling` | Socket.IO WebRTC signaling |
+| `/` (default ns) | Socket.IO WebRTC signaling |
 
 ## Troubleshooting
 
 ### Phone can't connect
 - Ensure phone and PC are on the **same WiFi**
 - Check if firewall is blocking port **8765**
-- Try opening `http://<pc-ip>:8765/phone` directly in phone browser
+- Open `https://<pc-ip>:8765/phone` directly in phone browser (HTTPS required)
+- Accept the security warning on the phone browser
 
 ### QR code doesn't scan
 - Use the URL text shown below the QR code

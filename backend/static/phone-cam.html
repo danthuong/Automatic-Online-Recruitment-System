@@ -294,9 +294,9 @@
         return;
       }
 
-      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/signaling', 'network');
+      log('NETWORK: Connecting to Socket.IO at ' + socketUrl + '/ ...', 'network');
 
-      socket = io(socketUrl + '/signaling', {
+      socket = io(socketUrl, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,

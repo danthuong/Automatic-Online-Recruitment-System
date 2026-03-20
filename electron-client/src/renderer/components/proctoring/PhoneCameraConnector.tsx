@@ -106,7 +106,7 @@ export function PhoneCameraConnector({
 
   const connectSignaling = (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const socket = window.io(`${AI_SERVER_URL}/signaling`, {
+      const socket = window.io(`${AI_SERVER_URL}`, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,
@@ -128,8 +128,8 @@ export function PhoneCameraConnector({
       })
 
       socket.on('connect_error', (err: any) => {
-        console.error('[PhoneCamera] Signaling connection error:', err)
-        reject(new Error('Cannot connect to signaling server'))
+        console.error('[PhoneCamera] Connection error:', err.message, '| Type:', err.type, '| Context:', JSON.stringify(err.context || {}))
+        reject(new Error('Cannot connect to signaling server: ' + (err.message || 'connection rejected')))
       })
 
       socket.on('disconnect', () => {
