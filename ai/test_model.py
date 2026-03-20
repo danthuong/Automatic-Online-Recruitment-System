@@ -8,52 +8,17 @@ import os
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-# --- 1. ĐỊNH NGHĨA ĐƯỜNG DẪN MÔ HÌNH ---
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(CURRENT_DIR)
-MODELS_DIR = os.path.join(ROOT_DIR, 'ai_testing')
-MODEL_SAVE_PATH = os.path.join(MODELS_DIR, 'gesture_model.pkl')
-HAND_TASK_PATH = "hand_landmarker.task"
-
-# --- 2. LOAD MÔ HÌNH XGBOOST ---
-if not os.path.exists(MODEL_SAVE_PATH):
-    print(f"[LỖI] Không tìm thấy file mô hình tại: {MODEL_SAVE_PATH}")
-    exit()
-
-print("Đang tải mô hình XGBoost...")
-with open(MODEL_SAVE_PATH, 'rb') as f:
-    model, label_encoder = pickle.load(f)
-print("Tải mô hình thành công! Bật webcam...")
-
-# Khởi tạo tên cột (84 cột) cho 2 tay
-feature_names = []
-for hand_idx in [1, 2]:
-    for i in range(21):
-        feature_names.extend([f"h{hand_idx}_p{i}_x", f"h{hand_idx}_p{i}_y"])
-
-# --- 3. KHAI BÁO CÁC ĐIỂM NỐI TAY ---
 HAND_CONNECTIONS = [
-    (0, 1), (1, 2), (2, 3), (3, 4),         
-    (0, 5), (5, 6), (6, 7), (7, 8),         
-    (5, 9), (9, 10), (10, 11), (11, 12),    
-    (9, 13), (13, 14), (14, 15), (15, 16),  
-    (13, 17), (0, 17), (17, 18), (18, 19), (19, 20) 
+    (0, 1), (1, 2), (2, 3), (3, 4),
+    (0, 5), (5, 6), (6, 7), (7, 8),
+    (5, 9), (9, 10), (10, 11), (11, 12),
+    (9, 13), (13, 14), (14, 15), (15, 16),
+    (13, 17), (0, 17), (17, 18), (18, 19), (19, 20)
 ]
 
-# --- 4. CÁC HÀM HỖ TRỢ ---
-def draw_hand_skeleton(frame, hand_landmarks_list, w, h):
-    pixel_points = []
-    for lm in hand_landmarks_list:
-        cx, cy = int(lm.x * w), int(lm.y * h)
-        pixel_points.append((cx, cy))
-        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1) 
+CHEATING_CONFIDENCE_THRESHOLD = 0.70
+CHEATING_STRIKE_THRESHOLD = 0.90
 
-    for connection in HAND_CONNECTIONS:
-        start_idx, end_idx = connection[0], connection[1]
-        if start_idx < len(pixel_points) and end_idx < len(pixel_points):
-            pt1 = pixel_points[start_idx]
-            pt2 = pixel_points[end_idx]
-            cv2.line(frame, pt1, pt2, (255, 0, 0), 2)
 
 def preprocess_landmarks(landmark_list):
     temp_landmark_list = []
@@ -73,92 +38,102 @@ def preprocess_landmarks(landmark_list):
 
     return normalized
 
-# --- 5. KHỞI TẠO MEDIAPIPE TASKS API ---
-base_options = python.BaseOptions(model_asset_path=HAND_TASK_PATH)
-options = vision.HandLandmarkerOptions(
-    base_options=base_options,
-    running_mode=vision.RunningMode.VIDEO,
-    num_hands=2,
-    min_hand_detection_confidence=0.5,
-    min_hand_presence_confidence=0.5,
-    min_tracking_confidence=0.5
-)
-hand_landmarker = vision.HandLandmarker.create_from_options(options)
 
-# --- 6. CHẠY WEBCAM VÀ DỰ ĐOÁN REAL-TIME ---
-cap = cv2.VideoCapture(1)
-frame_timestamp_ms = 0
+class GestureDetector:
+    def __init__(self, model_path=None, hand_task_path=None):
+        self.model_path = model_path or self._find_model_path()
+        self.hand_task_path = hand_task_path or self._find_hand_task_path()
+        self.model = None
+        self.label_encoder = None
+        self.hand_landmarker = None
+        self._load_model()
+        self._init_mediapipe()
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-        
-    h, w, _ = frame.shape
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    
-    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-    result = hand_landmarker.detect_for_video(mp_image, frame_timestamp_ms)
-    frame_timestamp_ms += 33 
+    def _find_model_path(self):
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(root_dir, 'ai_testing', 'gesture_model.pkl')
 
-    if result.hand_landmarks:
-        # Sắp xếp tay từ trái sang phải màn hình (Dựa vào tọa độ x của điểm gốc)
+    def _find_hand_task_path(self):
+        return 'hand_landmarker.task'
+
+    def _load_model(self):
+        if not os.path.exists(self.model_path):
+            raise FileNotFoundError(f"Model not found at: {self.model_path}")
+
+        with open(self.model_path, 'rb') as f:
+            self.model, self.label_encoder = pickle.load(f)
+
+        feature_names = []
+        for hand_idx in [1, 2]:
+            for i in range(21):
+                feature_names.extend([f"h{hand_idx}_p{i}_x", f"h{hand_idx}_p{i}_y"])
+        self.feature_names = feature_names
+
+    def _init_mediapipe(self):
+        base_options = python.BaseOptions(model_asset_path=self.hand_task_path)
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.VIDEO,
+            num_hands=2,
+            min_hand_detection_confidence=0.5,
+            min_hand_presence_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
+        self.hand_landmarker = vision.HandLandmarker.create_from_options(options)
+
+    def process_frame(self, frame, frame_timestamp_ms=0):
+        h, w, _ = frame.shape
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        result = self.hand_landmarker.detect_for_video(mp_image, frame_timestamp_ms)
+
+        if not result.hand_landmarks:
+            return {
+                'hands_detected': 0,
+                'gesture': None,
+                'cheating_probability': 0.0,
+                'is_cheating': False,
+                'is_strike': False,
+            }
+
         hands = sorted(result.hand_landmarks, key=lambda hand: hand[0].x)
-        
+        hands_detected = len(hands)
+
         final_features = []
-        
-        # --- VẼ KHUNG XƯƠNG CHO TẤT CẢ CÁC TAY ---
-        for hand in hands:
-             draw_hand_skeleton(frame, hand, w, h)
-             
-        # --- XỬ LÝ DỮ LIỆU ĐƯA VÀO XGBOOST (GỘP 2 TAY) ---
-        # 1. Tay thứ nhất (Tay trái)
         lm_list_1 = [[lm.x, lm.y] for lm in hands[0]]
         final_features.extend(preprocess_landmarks(lm_list_1))
-        
-        # Lấy tọa độ để vẽ chữ cho tay 1
-        wrist_x1 = int(hands[0][0].x * w)
-        wrist_y1 = int(hands[0][0].y * h)
-        
-        # 2. Tay thứ hai (Tay phải)
+
         if len(hands) > 1:
             lm_list_2 = [[lm.x, lm.y] for lm in hands[1]]
             final_features.extend(preprocess_landmarks(lm_list_2))
-            # Lấy tọa độ vẽ chữ cho tay 2
-            wrist_x2 = int(hands[1][0].x * w)
-            wrist_y2 = int(hands[1][0].y * h)
         else:
-            # Padding nếu chỉ có 1 tay
             final_features.extend([0.0] * 42)
-            
-        # 3. Chuyển thành DataFrame
-        df_input = pd.DataFrame([final_features], columns=feature_names)
-        
-        # 4. Dự đoán với XGBoost
-        pred_encoded = model.predict(df_input)[0]
-        prob = np.max(model.predict_proba(df_input)[0]) * 100
-        predicted_label = str(label_encoder.inverse_transform([pred_encoded])[0])
-        
-        # Tùy chỉnh trạng thái hiển thị
-        is_cheating = "cheat" in predicted_label.lower() or "1" in predicted_label
-        color = (0, 0, 255) if is_cheating else (0, 255, 0)
-        status_text = predicted_label.upper()
-        
-        # 5. In kết quả lên màn hình
-        # In ở cổ tay thứ 1
-        cv2.putText(frame, f"{status_text} ({prob:.1f}%)", (wrist_x1 - 50, wrist_y1 + 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA)
-        
-        # Nếu có tay 2 thì in thêm ở cổ tay 2 cho trực quan
-        if len(hands) > 1:
-            cv2.putText(frame, f"{status_text} ({prob:.1f}%)", (wrist_x2 - 50, wrist_y2 + 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA)
 
-    cv2.putText(frame, "Press 'q' to quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    cv2.imshow('Custom Draw - XGBoost Tester (2 Hands)', frame)
+        df_input = pd.DataFrame([final_features], columns=self.feature_names)
+        pred_encoded = self.model.predict(df_input)[0]
+        probs = self.model.predict_proba(df_input)[0]
+        cheating_prob = 0.0
+        
+        for i, label in enumerate(self.label_encoder.classes_):
+            if 'cheat' in str(label).lower():
+                cheating_prob = float(probs[i])
+                break
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        predicted_label = str(self.label_encoder.inverse_transform([pred_encoded])[0])
+        
+        is_cheating = 'cheat' in predicted_label.lower() or cheating_prob >= CHEATING_CONFIDENCE_THRESHOLD
+        is_strike = cheating_prob >= CHEATING_STRIKE_THRESHOLD
 
-cap.release()
-cv2.destroyAllWindows()
+        return {
+            'hands_detected': hands_detected,
+            'gesture': predicted_label,
+            'cheating_probability': float(cheating_prob * 100),
+            'confidence': float(np.max(probs) * 100),
+            'is_cheating': is_cheating,
+            'is_strike': is_strike,
+        }
+
+    def stop(self):
+        if self.hand_landmarker:
+            self.hand_landmarker.close()
+        print("[GestureDetector] Stopped")

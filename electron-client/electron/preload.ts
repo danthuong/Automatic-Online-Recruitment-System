@@ -35,6 +35,10 @@ const IPC_CHANNELS = {
     ENABLE_PROTECTION: 'content:enableProtection',
     DISABLE_PROTECTION: 'content:disableProtection',
   },
+  AI: {
+    START_SERVER: 'ai:startServer',
+    STOP_SERVER: 'ai:stopServer',
+  },
 }
 
 export interface ExamAPI {
@@ -71,6 +75,11 @@ export interface ProcessAPI {
 export interface ContentAPI {
   enableProtection: () => Promise<{ success: boolean }>
   disableProtection: () => Promise<{ success: boolean }>
+}
+
+export interface AIAPI {
+  startServer: () => Promise<{ success: boolean }>
+  stopServer: () => Promise<{ success: boolean }>
 }
 
 export interface WindowAPI {
@@ -147,11 +156,17 @@ const contentAPI: ContentAPI = {
   disableProtection: () => ipcRenderer.invoke(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION),
 }
 
+const aiAPI: AIAPI = {
+  startServer: () => ipcRenderer.invoke(IPC_CHANNELS.AI.START_SERVER),
+  stopServer: () => ipcRenderer.invoke(IPC_CHANNELS.AI.STOP_SERVER),
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   exam: examAPI,
   proctor: proctorAPI,
   process: processAPI,
   content: contentAPI,
+  ai: aiAPI,
 })
 
 contextBridge.exposeInMainWorld('electronEvents', {
@@ -183,6 +198,7 @@ declare global {
       proctor: ProctorAPI
       process: ProcessAPI
       content: ContentAPI
+      ai: AIAPI
     }
     electronEvents?: {
       onShortcutBlocked: (callback: (shortcut: string) => void) => () => void

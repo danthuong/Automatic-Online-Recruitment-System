@@ -33,6 +33,10 @@ export const IPC_CHANNELS = {
     ENABLE_PROTECTION: 'content:enableProtection',
     DISABLE_PROTECTION: 'content:disableProtection',
   },
+  AI: {
+    START_SERVER: 'ai:startServer',
+    STOP_SERVER: 'ai:stopServer',
+  },
 } as const
 
 export const BLACKLISTED_PROCESSES = [

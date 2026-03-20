@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Timer } from '@/renderer/components/exam/Timer'
 import { QuestionNav } from '@/renderer/components/exam/QuestionNav'
@@ -7,6 +7,7 @@ import { MultipleChoice } from '@/renderer/components/questions/MultipleChoice'
 import { CodeEditor } from '@/renderer/components/questions/CodeEditor'
 import { EssayInput } from '@/renderer/components/questions/EssayInput'
 import { WarningBanner } from '@/renderer/components/proctoring/WarningBanner'
+import { AIOverlay } from '@/renderer/components/proctoring/AIOverlay'
 import { Button } from '@/renderer/components/ui/button'
 import { Badge } from '@/renderer/components/ui/badge'
 import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
@@ -23,6 +24,7 @@ import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
 import { cn } from '@/renderer/lib/utils'
 import { InputTracker } from '@/renderer/input-tracker'
 import { useTheme } from '@/renderer/hooks/useTheme'
+import { aiProctorService } from '@/renderer/services/ai-proctor-service'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -34,6 +36,8 @@ import {
   Bot, 
   PanelRightClose,
   PanelRightOpen,
+  Eye,
+  Hand,
 } from 'lucide-react'
 
 const DEFAULT_LANGUAGE: Language = 'python'
@@ -67,6 +71,9 @@ export function ExamScreen() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false)
 
+  const videoRef0 = useRef<HTMLVideoElement>(null)
+  const videoRef1 = useRef<HTMLVideoElement>(null)
+
   const {
     questions,
     currentQuestionIndex,
@@ -88,6 +95,11 @@ export function ExamScreen() {
     showWarningDialog,
     dismissWarningDialog,
     lastStrikeReason,
+    aiProctorState,
+    aiStream0,
+    aiStream1,
+    setAIProctorState,
+    handleAIAlert,
   } = useExamStore()
 
   const { theme } = useTheme()
@@ -112,6 +124,28 @@ export function ExamScreen() {
       setShowDisqualifyDialog(false)
     }
   }, [status])
+
+  useEffect(() => {
+    if (status === 'exam' && aiStream0 && aiStream1) {
+      if (videoRef0.current) videoRef0.current.srcObject = aiStream0
+      if (videoRef1.current) videoRef1.current.srcObject = aiStream1
+      if (videoRef0.current) videoRef0.current.play().catch(() => {})
+      if (videoRef1.current) videoRef1.current.play().catch(() => {})
+
+      aiProctorService.connect(
+        aiStream0,
+        aiStream1,
+        (state) => setAIProctorState(state),
+        (alert) => handleAIAlert(alert)
+      ).catch((err) => {
+        console.error('[ExamScreen] AI service connection failed:', err)
+      })
+
+      return () => {
+        aiProctorService.stop()
+      }
+    }
+  }, [status, aiStream0, aiStream1, setAIProctorState, handleAIAlert])
 
   useEffect(() => {
     if (showWarningDialog) {
@@ -469,11 +503,63 @@ export function ExamScreen() {
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar */}
         <aside className={cn(
-          "w-72 border-r p-4 space-y-4 overflow-y-auto",
+          "w-80 border-r p-4 space-y-4 overflow-y-auto",
           theme === 'dark' 
             ? 'bg-card/30 border-border backdrop-blur-sm' 
             : 'bg-white border-slate-200'
         )}>
+          {/* AI Camera Preview */}
+          <div className="space-y-2">
+            <h3 className={cn(
+              "text-sm font-medium",
+              theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+            )}>
+              AI Cameras
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
+                <video
+                  ref={videoRef0}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover transform scale-x-[-1]"
+                />
+                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  Face
+                </div>
+                {aiProctorState && (
+                  <div className={cn(
+                    'absolute top-1 right-1 w-2 h-2 rounded-full',
+                    aiProctorState.faceCount === 1 ? 'bg-green-500 animate-pulse' :
+                    aiProctorState.faceCount === 0 ? 'bg-red-500' : 'bg-red-500 animate-pulse'
+                  )} />
+                )}
+              </div>
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
+                <video
+                  ref={videoRef1}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover transform scale-x-[-1]"
+                />
+                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
+                  <Hand className="w-3 h-3" />
+                  Hand
+                </div>
+                {aiProctorState && (
+                  <div className={cn(
+                    'absolute top-1 right-1 w-2 h-2 rounded-full',
+                    aiProctorState.handsDetected > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'
+                  )} />
+                )}
+              </div>
+            </div>
+            {aiProctorState && <AIOverlay state={aiProctorState} />}
+          </div>
+
           {/* Question Navigator */}
           <div className="space-y-2">
             <h3 className={cn(

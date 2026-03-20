@@ -5,6 +5,8 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
+    "dev:python": "cd ../ai && python server.py",
+    "dev:full": "concurrently --kill-others-on-fail --names \"ELECTRON,PYTHON\" --prefix-colors \"cyan,magenta\" \"npm run dev\" \"npm run dev:python\"",
     "build": "tsc && vite build && electron-builder",
     "build:vite": "tsc && vite build",
     "postinstall": "electron-rebuild",
@@ -24,6 +26,7 @@
     "@tkomde/iohook": "^1.1.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "concurrently": "^8.2.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
