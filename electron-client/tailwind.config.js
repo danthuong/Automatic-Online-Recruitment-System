@@ -66,14 +66,26 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        "soft": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-        "card": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-        "card-hover": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-        "elevated": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "soft": "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
+        "soft-sm": "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        "card": "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04)",
+        "elevated": "0 8px 16px 0 rgb(0 0 0 / 0.06), 0 4px 8px -2px rgb(0 0 0 / 0.04)",
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+      transitionTimingFunction: {
+        'asian': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        'fabric': 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+        'paper': 'cubic-bezier(0.4, 0, 0.6, 1)',
+      },
+      transitionDuration: {
+        'fast': '150ms',
+        'normal': '250ms',
+        'slow': '400ms',
+        'slower': '600ms',
       },
       keyframes: {
         "accordion-down": {
@@ -89,7 +101,7 @@ module.exports = {
           to: { opacity: "1" },
         },
         "fade-in-up": {
-          from: { opacity: "0", transform: "translateY(10px)" },
+          from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "slide-in-right": {
@@ -101,27 +113,43 @@ module.exports = {
           to: { transform: "translateX(0)" },
         },
         "scale-in": {
-          from: { opacity: "0", transform: "scale(0.95)" },
+          from: { opacity: "0", transform: "scale(0.96)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
         "slide-up": {
-          from: { opacity: "0", transform: "translateY(20px)" },
+          from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "ink-spread": {
+          '0%': { opacity: "0", transform: "scale(0.96)" },
+          '100%': { opacity: "1", transform: "scale(1)" },
+        },
+        "fabric-unfold": {
+          '0%': { opacity: "0", transform: "translateY(16px)" },
+          '100%': { opacity: "1", transform: "translateY(0)" },
+        },
+        "paper-slide": {
+          '0%': { opacity: "0", transform: "translateX(-8px)" },
+          '100%': { opacity: "1", transform: "translateX(0)" },
+        },
+        "gentle-fade": {
+          '0%': { opacity: "0" },
+          '100%': { opacity: "1" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.4s ease-out",
-        "fade-in-up": "fade-in-up 0.4s ease-out",
-        "slide-in-right": "slide-in-right 0.3s ease-out",
-        "slide-in-left": "slide-in-left 0.3s ease-out",
-        "scale-in": "scale-in 0.2s ease-out",
-        "slide-up": "slide-up 0.4s ease-out",
-      },
-      transitionDuration: {
-        "400": "400ms",
-        "600": "600ms",
+        "accordion-down": "accordion-down 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        "accordion-up": "accordion-up 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        "fade-in": "fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        "slide-in-right": "slide-in-right 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+        "slide-in-left": "slide-in-left 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+        "scale-in": "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "slide-up": "slide-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)",
+        "ink-spread": "ink-spread 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+        "fabric-unfold": "fabric-unfold 0.6s cubic-bezier(0.22, 0.61, 0.36, 1)",
+        "paper-slide": "paper-slide 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        "gentle-fade": "gentle-fade 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
       },
     },
   },
