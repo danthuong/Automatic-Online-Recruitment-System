@@ -74,11 +74,12 @@ function App() {
           // Fetch test from Node.js server using testId
           console.log('[App] Fetching test from Node.js API...')
           const testResponse = await fetchTestById(loginData.testId)
-
-          console.log('[App] Test loaded:', testResponse.questions.length, 'questions')
+          const questionsRaw = testResponse?.data?.questions
+          console.log(testResponse)
+          console.log('[App] Test loaded:', questionsRaw.length, 'questions')
 
           // Convert Node.js questions to app format
-          const appQuestions: Question[] = testResponse.questions.map((q, idx) => {
+          const appQuestions: Question[] = testResponse.data.questions.map((q, idx) => {
             const converted = convertNodeJSToAppQuestion(q)
             console.log(`[App] Question ${idx + 1}:`, converted.id, converted.type, converted.difficulty)
             return converted

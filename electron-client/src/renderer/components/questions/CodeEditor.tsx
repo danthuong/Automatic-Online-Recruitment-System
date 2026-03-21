@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/renderer/components/ui/card'
-import { cn } from '@/renderer/lib/utils'
+import { cn } from '@/renderer/lib/utils'   
 import { Code, RotateCcw, Play, ChevronDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/renderer/components/ui/button'
 import type { Language } from '@/renderer/store/examStore'
@@ -130,8 +130,11 @@ export function CodeEditor({
             <CardTitle className="flex items-center gap-2">
               <Code className="h-5 w-5 text-primary" />
               Coding Question
-            </CardTitle>
-            <CardDescription className="line-clamp-2">{question}</CardDescription>
+            </CardTitle> 
+            {/* <CardDescription className="line-clamp-2 !text-slate-700">{question}</CardDescription> */}
+            {/* <p className="line-clamp-2 text-sm text-slate-800 dark:text-slate-300">{question}</p> */}
+            <p className="line-clamp-2 text-sm text-slate-900 dark:text-slate-100">{question}</p>
+
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {languages.length > 1 && (

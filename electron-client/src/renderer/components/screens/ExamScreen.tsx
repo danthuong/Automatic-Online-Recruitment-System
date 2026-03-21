@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Timer } from '@/renderer/components/exam/Timer'
 import { QuestionNav } from '@/renderer/components/exam/QuestionNav'
@@ -24,24 +24,26 @@ import { cn } from '@/renderer/lib/utils'
 import { InputTracker } from '@/renderer/input-tracker'
 import { useTheme } from '@/renderer/hooks/useTheme'
 import { localProctorService } from '@/renderer/services/local-proctor-service'
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Flag, 
-  Send, 
-  AlertTriangle, 
-  ShieldX, 
-  Code2, 
-  Bot, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  Send,
+  AlertTriangle,
+  ShieldX,
+  Code2,
+  Bot,
   PanelRightClose,
   PanelRightOpen,
   FileText,
   Keyboard,
   Lightbulb,
+  Eye,
+  Hand
 } from 'lucide-react'
+import { AIOverlay } from '../proctoring/AIOverlay'
 import { executeCode, TestResult } from '@/renderer/services/interview-api'
 
-// LeetCode-style question panel component
 function QuestionPanel({
   question,
   sections,
@@ -75,12 +77,12 @@ function QuestionPanel({
         {/* Problem Description */}
         {sections.problem && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Description
             </h3>
-            <div className="prose prose-invert max-w-none">
-              <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-mono text-sm">
+            <div className="prose max-w-none">
+              <p className="text-slate-900 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-mono text-sm">
                 {sections.problem}
               </p>
             </div>
@@ -90,7 +92,7 @@ function QuestionPanel({
         {/* Examples */}
         {question.examples && question.examples.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Lightbulb className="w-4 h-4" />
               Examples
             </h3>
@@ -98,21 +100,21 @@ function QuestionPanel({
               {question.examples.map((example: any, idx: number) => (
                 <div
                   key={idx}
-                  className="bg-slate-900/50 rounded-lg p-4 border border-slate-800"
+                  className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800"
                 >
                   <div className="space-y-2 font-mono text-sm">
                     <div>
                       <span className="text-slate-500">Input: </span>
-                      <span className="text-blue-400">{example.input}</span>
+                      <span className="text-blue-600 dark:text-blue-400">{example.input}</span>
                     </div>
                     <div>
                       <span className="text-slate-500">Output: </span>
-                      <span className="text-green-400">{example.output}</span>
+                      <span className="text-green-600 dark:text-green-400">{example.output}</span>
                     </div>
                     {example.explanation && (
                       <div>
                         <span className="text-slate-500">Explanation: </span>
-                        <span className="text-slate-400">{example.explanation}</span>
+                        <span className="text-slate-600 dark:text-slate-400">{example.explanation}</span>
                       </div>
                     )}
                   </div>
@@ -125,13 +127,13 @@ function QuestionPanel({
         {/* Constraints */}
         {question.constraints && question.constraints.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Keyboard className="w-4 h-4" />
               Constraints
             </h3>
             <ul className="list-disc list-inside space-y-1 font-mono text-sm">
               {question.constraints.map((constraint: string, idx: number) => (
-                <li key={idx} className="text-slate-300">
+                <li key={idx} className="text-slate-700 dark:text-slate-300">
                   {constraint}
                 </li>
               ))}
@@ -142,11 +144,11 @@ function QuestionPanel({
         {/* Input Format */}
         {sections.input && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Input Format
             </h3>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-              <p className="text-slate-200 font-mono text-sm whitespace-pre-wrap">
+            <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+              <p className="text-slate-900 dark:text-slate-200 font-mono text-sm whitespace-pre-wrap">
                 {sections.input}
               </p>
             </div>
@@ -156,11 +158,11 @@ function QuestionPanel({
         {/* Output Format */}
         {sections.output && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Output Format
             </h3>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-              <p className="text-slate-200 font-mono text-sm whitespace-pre-wrap">
+            <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+              <p className="text-slate-900 dark:text-slate-200 font-mono text-sm whitespace-pre-wrap">
                 {sections.output}
               </p>
             </div>
@@ -170,11 +172,11 @@ function QuestionPanel({
         {/* Note */}
         {sections.note && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Note
             </h3>
             <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-              <p className="text-amber-200 text-sm whitespace-pre-wrap">{sections.note}</p>
+              <p className="text-amber-800 dark:text-amber-200 text-sm whitespace-pre-wrap">{sections.note}</p>
             </div>
           </div>
         )}
@@ -182,7 +184,6 @@ function QuestionPanel({
     </div>
   )
 }
-
 // Parse formatted question sections from the API response
 interface QuestionSections {
   problem: string
@@ -294,6 +295,8 @@ export function ExamScreen() {
   const [showAIPanel, setShowAIPanel] = useState(true)
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false)
+  const videoRef0 = useRef<HTMLVideoElement>(null)
+  const videoRef1 = useRef<HTMLVideoElement>(null)
 
   const {
     questions,
@@ -394,14 +397,14 @@ export function ExamScreen() {
           details: `${event.data.length} characters pasted`,
           severity: event.data.suspicious ? 'warning' : 'info',
         })
-        
+
         if (window.electronAPI) {
           window.electronAPI.proctor.logEvent({
             type: 'paste_event',
             data: event.data,
           })
         }
-        
+
         if (event.data.suspicious) {
           addStrike('Suspicious paste detected')
         }
@@ -431,10 +434,10 @@ export function ExamScreen() {
           addStrike('Multiple monitors detected')
         }
       })
-      
+
       const unsubShortcut = window.electronEvents?.onShortcutBlocked((shortcut) => {
         console.log(`[ExamScreen] Shortcut blocked: ${shortcut}`)
-        
+
         addTimelineEvent({
           timestamp: new Date(),
           type: 'warning',
@@ -442,22 +445,22 @@ export function ExamScreen() {
           details: `Attempted shortcut: ${shortcut}`,
           severity: 'warning',
         })
-        
+
         addWarning({
           type: 'major',
           message: `Forbidden shortcut detected: ${shortcut}`,
         })
-        
+
         addStrike(`Forbidden shortcut: ${shortcut}`)
-        
+
         window.electronAPI?.exam.getWindowBounds().then(() => {
           console.log('[ExamScreen] Attempting to refocus window')
         })
       })
-      
+
       const unsubBlur = window.electronEvents?.onFocusLost(() => {
         console.log('[ExamScreen] Focus lost detected')
-        
+
         addTimelineEvent({
           timestamp: new Date(),
           type: 'warning',
@@ -466,7 +469,7 @@ export function ExamScreen() {
           severity: 'warning',
         })
       })
-      
+
       return () => {
         tracker.stop()
         unsubShortcut?.()
@@ -515,7 +518,7 @@ export function ExamScreen() {
     if (window.electronAPI) {
       await window.electronAPI.exam.setKiosk(false)
       await window.electronAPI.exam.disableFullscreen()
-      
+
       window.electronAPI.proctor.logEvent({
         type: 'exam_submit',
         data: {
@@ -524,7 +527,7 @@ export function ExamScreen() {
         },
       })
     }
-    
+
     submitExam()
   }
 
@@ -651,8 +654,8 @@ export function ExamScreen() {
       {/* Header */}
       <header className={cn(
         "sticky top-0 z-40 border-b",
-        theme === 'dark' 
-          ? 'bg-card/80 border-border backdrop-blur-sm' 
+        theme === 'dark'
+          ? 'bg-card/80 border-border backdrop-blur-sm'
           : 'bg-white border-slate-200'
       )}>
         <div className="flex items-center justify-between px-6 py-3">
@@ -667,12 +670,12 @@ export function ExamScreen() {
                 HCMUT
               </span>
             </div>
-            
+
             <div className={cn(
               "h-6 w-px hidden sm:block",
               theme === 'dark' ? 'bg-border' : 'bg-slate-200'
             )} />
-            
+
             <Timer
               initialTime={totalTime}
               onTimeUp={handleSubmit}
@@ -681,22 +684,22 @@ export function ExamScreen() {
 
           {/* Center - Question Info */}
           <div className="hidden md:flex items-center gap-4">
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={cn(
                 "px-3 py-1.5",
-                theme === 'dark' 
-                  ? 'bg-secondary text-slate-300 border-border' 
+                theme === 'dark'
+                  ? 'bg-secondary text-slate-300 border-border'
                   : 'bg-slate-100 text-slate-600 border-slate-200'
               )}
             >
               <Code2 className="w-4 h-4 mr-2 text-primary" />
               Question {currentQuestionIndex + 1} of {questions.length}
             </Badge>
-            
+
             {flagged.has(currentQuestion?.id || '') && (
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className="px-3 py-1.5 bg-amber-50 text-amber-600 border-amber-200"
               >
                 <Flag className="w-4 h-4 mr-2" />
@@ -714,8 +717,8 @@ export function ExamScreen() {
                 animate={{ scale: 1 }}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
-                  strikeCount >= 2 
-                    ? 'bg-red-100 text-red-600 border border-red-200' 
+                  strikeCount >= 2
+                    ? 'bg-red-100 text-red-600 border border-red-200'
                     : 'bg-amber-100 text-amber-600 border border-amber-200'
                 )}
               >
@@ -732,7 +735,7 @@ export function ExamScreen() {
               className={cn(
                 'gap-2',
                 showAIPanel && theme === 'dark' ? 'bg-primary/10 border-primary/30' :
-                showAIPanel && theme === 'light' ? 'bg-slate-100 border-slate-300' : ''
+                  showAIPanel && theme === 'light' ? 'bg-slate-100 border-slate-300' : ''
               )}
             >
               <Bot className="w-4 h-4" />
@@ -743,7 +746,7 @@ export function ExamScreen() {
                 <PanelRightOpen className="w-4 h-4" />
               )}
             </Button>
-            
+
             {/* Theme Toggle */}
             <ThemeToggle />
           </div>
@@ -768,8 +771,8 @@ export function ExamScreen() {
         {/* Left Sidebar */}
         <aside className={cn(
           "w-72 border-r p-4 space-y-4 overflow-y-auto",
-          theme === 'dark' 
-            ? 'bg-card/30 border-border backdrop-blur-sm' 
+          theme === 'dark'
+            ? 'bg-card/30 border-border backdrop-blur-sm'
             : 'bg-white border-slate-200'
         )}>
           {/* AI Camera Preview */}
@@ -816,7 +819,7 @@ export function ExamScreen() {
                   <div className={cn(
                     'absolute top-1 right-1 w-2 h-2 rounded-full',
                     aiProctorState.faceCount === 1 ? 'bg-green-500 animate-pulse' :
-                    aiProctorState.faceCount === 0 ? 'bg-red-500' : 'bg-red-500 animate-pulse'
+                      aiProctorState.faceCount === 0 ? 'bg-red-500' : 'bg-red-500 animate-pulse'
                   )} />
                 )}
               </div>
@@ -858,110 +861,110 @@ export function ExamScreen() {
 
         {/* Main Editor Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-              {/* Question Content */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentQuestion?.id}
-                  variants={fadeVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="max-w-4xl mx-auto space-y-6"
-                >
-                  {/* Question Header */}
-                  <div className="bg-card border border-border rounded-lg p-6">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Badge 
-                            variant="outline"
-                            className={cn(
-                              currentQuestion?.difficulty === 'easy' 
-                                ? 'bg-green-100 text-green-800 border-green-200' 
-                                : currentQuestion?.difficulty === 'medium' 
-                                  ? 'bg-amber-100 text-amber-800 border-amber-200'
-                                  : 'bg-red-100 text-red-800 border-red-200'
-                            )}
-                          >
-                            {currentQuestion?.difficulty}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {currentQuestion?.title}
-                          </span>
-                        </div>
-                        <h2 className="text-xl font-semibold text-foreground">
-                          Question {currentQuestionIndex + 1}
-                        </h2>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleFlag(currentQuestion?.id || '')}
+          {/* Question Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQuestion?.id}
+              variants={fadeVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="max-w-4xl mx-auto space-y-6"
+            >
+              {/* Question Header */}
+              <div className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge
+                        variant="outline"
                         className={cn(
-                          'gap-2',
-                          flagged.has(currentQuestion?.id || '') && 'text-amber-600 bg-amber-50'
+                          currentQuestion?.difficulty === 'easy'
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : currentQuestion?.difficulty === 'medium'
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              : 'bg-red-100 text-red-800 border-red-200'
                         )}
                       >
-                        <Flag className="w-4 h-4" />
-                        {flagged.has(currentQuestion?.id || '') ? 'Flagged' : 'Flag'}
-                      </Button>
+                        {currentQuestion?.difficulty}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {currentQuestion?.title}
+                      </span>
                     </div>
-
-                    {/* Question Body */}
-                    {renderQuestion()}
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Question {currentQuestionIndex + 1}
+                    </h2>
                   </div>
 
-                  {/* Navigation */}
-                  <div className="flex items-center justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentQuestion(Math.max(0, currentQuestionIndex - 1))}
-                      disabled={currentQuestionIndex === 0}
-                      className="gap-2"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      Previous
-                    </Button>
-
-                    {currentQuestionIndex === questions.length - 1 ? (
-                      <Button
-                        onClick={() => setShowSubmitDialog(true)}
-                        className="gap-2"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Submit Exam
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => setCurrentQuestion(currentQuestionIndex + 1)}
-                        className="gap-2"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleFlag(currentQuestion?.id || '')}
+                    className={cn(
+                      'gap-2',
+                      flagged.has(currentQuestion?.id || '') && 'text-amber-600 bg-amber-50'
                     )}
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </main>
+                  >
+                    <Flag className="w-4 h-4" />
+                    {flagged.has(currentQuestion?.id || '') ? 'Flagged' : 'Flag'}
+                  </Button>
+                </div>
 
-            {/* AI Panel */}
-            <AnimatePresence>
-              {showAIPanel && (
-                <motion.aside
-                  variants={fadeVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="w-80 lg:w-96 border-l border-border bg-card overflow-hidden"
+                {/* Question Body */}
+                {renderQuestion()}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentQuestion(Math.max(0, currentQuestionIndex - 1))}
+                  disabled={currentQuestionIndex === 0}
+                  className="gap-2"
                 >
-                  <div className="h-full p-4">
-                    <InterviewerChat questionId={currentQuestion?.id || ''} />
-                  </div>
-                </motion.aside>
-              )}
-            </AnimatePresence>
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+
+                {currentQuestionIndex === questions.length - 1 ? (
+                  <Button
+                    onClick={() => setShowSubmitDialog(true)}
+                    className="gap-2"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Submit Exam
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setCurrentQuestion(currentQuestionIndex + 1)}
+                    className="gap-2"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </main>
+
+        {/* AI Panel */}
+        <AnimatePresence>
+          {showAIPanel && (
+            <motion.aside
+              variants={fadeVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-80 lg:w-96 border-l border-border bg-card overflow-hidden"
+            >
+              <div className="h-full p-4">
+                <InterviewerChat questionId={currentQuestion?.id || ''} />
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Strike Warning Dialog */}
@@ -978,12 +981,12 @@ export function ExamScreen() {
           </DialogHeader>
           <div className={cn(
             "p-4 rounded-xl border space-y-2",
-            theme === 'dark' 
-              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' 
+            theme === 'dark'
+              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
               : 'bg-amber-50 border-amber-200 text-amber-700'
           )}>
             <p className="text-sm">
-              <strong>Warning:</strong> This incident has been recorded. 
+              <strong>Warning:</strong> This incident has been recorded.
               After 3 warnings, you will be <strong>disqualified</strong> from the exam.
             </p>
           </div>
@@ -999,7 +1002,7 @@ export function ExamScreen() {
       </Dialog>
 
       {/* Disqualification Dialog */}
-      <Dialog open={showDisqualifyDialog} onOpenChange={() => {}}>
+      <Dialog open={showDisqualifyDialog} onOpenChange={() => { }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -1012,8 +1015,8 @@ export function ExamScreen() {
           </DialogHeader>
           <div className={cn(
             "p-4 rounded-xl border space-y-3",
-            theme === 'dark' 
-              ? 'bg-red-500/10 border-red-500/20' 
+            theme === 'dark'
+              ? 'bg-red-500/10 border-red-500/20'
               : 'bg-red-50 border-red-200'
           )}>
             <div>
@@ -1025,8 +1028,8 @@ export function ExamScreen() {
               </p>
               <p className={cn(
                 "text-sm font-mono px-3 py-2 rounded-lg border",
-                theme === 'dark' 
-                  ? 'bg-red-500/10 text-red-300 border-red-500/20' 
+                theme === 'dark'
+                  ? 'bg-red-500/10 text-red-300 border-red-500/20'
                   : 'bg-red-100 text-red-700 border-red-200'
               )}>
                 {lastStrikeReason}
@@ -1045,7 +1048,7 @@ export function ExamScreen() {
                     key={i}
                     className={cn(
                       'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold',
-                      i <= strikeCount 
+                      i <= strikeCount
                         ? theme === 'dark'
                           ? 'bg-red-500 text-white'
                           : 'bg-red-500 text-white'
