@@ -9,20 +9,17 @@ import { cn } from '@/renderer/lib/utils'
 import {
   Shield,
   Lock,
-  User,
   Terminal,
   CheckCircle,
 } from 'lucide-react'
 
 interface LoginData {
   testId: string
-  candidateId: string
   candidateName: string
 }
 
 export function LoginScreen() {
   const [testId, setTestId] = useState('')
-  const [candidateId, setCandidateId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { setLogin } = useExamStore()
@@ -30,14 +27,13 @@ export function LoginScreen() {
   // Store login data in window for App.tsx to use
   const getLoginData = (): LoginData => ({
     testId: testId.trim(),
-    candidateId: candidateId.trim(),
-    candidateName: `Candidate ${candidateId.trim()}`,
+    candidateName: `Candidate ${testId.trim()}`,
   })
 
   // Expose login data to window for App.tsx
   React.useEffect(() => {
     (window as any).__loginData = getLoginData()
-  }, [testId, candidateId])
+  }, [testId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,11 +43,11 @@ export function LoginScreen() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800))
 
-      if (!testId.trim() || !candidateId.trim()) {
-        throw new Error('Please enter both Test ID and Candidate ID')
+      if (!testId.trim()) {
+        throw new Error('Please enter your Test ID')
       }
 
-      setLogin(testId.trim(), candidateId.trim())
+      setLogin(testId.trim())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -113,21 +109,6 @@ export function LoginScreen() {
                 />
               </div>
 
-              {/* Candidate ID */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
-                  Candidate ID
-                </label>
-                <Input
-                  type="text"
-                  value={candidateId}
-                  onChange={(e) => setCandidateId(e.target.value)}
-                  placeholder="Enter your candidate ID"
-                  disabled={isLoading}
-                  className="h-11"
-                />
-              </div>
 
               {/* Error Message */}
               {error && (
