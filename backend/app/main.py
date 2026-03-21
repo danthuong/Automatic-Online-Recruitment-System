@@ -12,8 +12,8 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 from .core.config import settings
-from .api.tinyfish import router as tinyfish_router
 from .api.repo_evaluation import router as repo_evaluation_router
+from .api.github_profile import router as github_profile_router
 from .services.llm_service import (
     get_llm_service,
     ChatMessage,
@@ -56,11 +56,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include TinyFish routers
-app.include_router(tinyfish_router)
-
 # Include Repo Evaluation router
 app.include_router(repo_evaluation_router)
+
+# Include GitHub Profile router
+app.include_router(github_profile_router)
 
 
 # Request/Response models

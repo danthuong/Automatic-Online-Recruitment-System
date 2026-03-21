@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 import httpx
 
 from ..models.evaluations import RepoEvaluation, EvaluationStatus
+from ..core.config import settings
 from .llm_service import get_llm_service
 
 logger = logging.getLogger(__name__)
@@ -353,7 +354,7 @@ class RepoEvaluationService:
             )
 
             # Call LLM
-            response = self.llm._generate_ollama(prompt, [])
+            response = self.llm.generate(prompt)
 
             # Parse response
             return self._parse_llm_response(response)
@@ -500,11 +501,15 @@ Respond in JSON format:
             # Create temp directory
             temp_dir = tempfile.mkdtemp(prefix='repo_eval_')
 
-            # Try to clone repo
-            clone_success = self.clone_repo(repo_url, temp_dir)
+            # Try to clone repo (skip if fast mode enabled)
+            use_fast_mode = settings.evaluation_fast_mode
+            clone_success = not use_fast_mode  # Skip clone in fast mode
 
             structure = {}
             readme = None
+
+            if use_fast_mode:
+                logger.info(f"Using fast mode (GitHub API only) for {parsed['owner']}/{parsed['repo']}")
 
             if clone_success and os.path.exists(temp_dir):
                 # Analyze file structure
@@ -630,7 +635,7 @@ Respond in JSON format:
             )
 
             # Call LLM synchronously
-            response = self.llm._generate_ollama(prompt, [])
+            response = self.llm.generate(prompt)
 
             # Parse response
             return self._parse_llm_response(response)

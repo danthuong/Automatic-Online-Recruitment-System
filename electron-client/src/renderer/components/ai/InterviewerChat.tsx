@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/renderer/lib/utils'
 import { AIQuestion, getAIResponsesForQuestion, getRandomEncouragement } from '@/renderer/lib/mock-ai-responses'
 import { useTheme } from '@/renderer/hooks/useTheme'
+import { getHealthStatus } from '@/renderer/services/interviewer-api'
 import { 
   Bot, 
   Lightbulb, 
@@ -18,10 +19,27 @@ interface InterviewerChatProps {
 
 export function InterviewerChat({ questionId, className }: InterviewerChatProps) {
   const [messages, setMessages] = useState<AIQuestion[]>([])
+  const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isExpanded, setIsExpanded] = useState(true)
+  const [healthStatus, setHealthStatus] = useState<{status: string; llm_provider: string; model: string} | null>(null)
+  const [isConnecting, setIsConnecting] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
+
+  // Fetch health status on mount
+  useEffect(() => {
+    const fetchHealth = async () => {
+      setIsConnecting(true)
+      const status = await getHealthStatus()
+      setHealthStatus(status)
+      setIsConnecting(false)
+    }
+    fetchHealth()
+    // Poll every 30 seconds
+    const interval = setInterval(fetchHealth, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     if (questionId === 'q1') {
@@ -55,6 +73,73 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
   const sendEncouragement = () => {
     const encouragement = getRandomEncouragement()
     simulateTyping(encouragement)
+  }
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return
+
+    const userMessage = inputMessage.trim()
+    setInputMessage('')
+
+    // Add user message to chat
+    const userMsg: AIQuestion = {
+      id: `user-${Date.now()}`,
+      type: 'general',
+      content: userMessage,
+      timestamp: Date.now()
+    }
+    setMessages(prev => [...prev, userMsg])
+
+    // Show typing indicator
+    setIsTyping(true)
+
+    try {
+      // Get context from parent (this would need to be passed as prop)
+      // For now, use a basic context
+      const context = {
+        question_text: 'Coding problem',
+        difficulty: 'medium',
+        constraints: 'No constraints',
+        input_format: 'Not specified',
+        output_format: 'Not specified'
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/interviewer/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: questionId,
+          message: userMessage,
+          context,
+          conversation_history: messages.map((m, i) => ({
+            role: m.id.startsWith('user-') ? 'user' : 'assistant',
+            content: m.content
+          }))
+        })
+      })
+
+      const data = await response.json()
+
+      // Add AI response
+      const aiResponse: AIQuestion = {
+        id: `ai-${Date.now()}`,
+        type: data.type || 'general',
+        content: data.reply,
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, aiResponse])
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      const errorResponse: AIQuestion = {
+        id: `error-${Date.now()}`,
+        type: 'general',
+        content: 'Sorry, I could not connect to the AI interviewer. Please try again.',
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, errorResponse])
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   return (
@@ -92,9 +177,14 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
             )}>
               <span className={cn(
                 "w-2 h-2 rounded-full",
-                theme === 'dark' ? 'bg-green-500' : 'bg-green-500'
+                isConnecting ? 'bg-yellow-500 animate-pulse' :
+                healthStatus?.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'
               )} />
-              Available
+              {isConnecting
+                ? 'Connecting...'
+                : healthStatus?.status === 'healthy'
+                  ? `${healthStatus.llm_provider}: ${healthStatus.model}`
+                  : 'Offline'}
             </div>
           </div>
         </div>
@@ -219,6 +309,39 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
               "p-4 border-t space-y-2",
               theme === 'dark' ? 'border-border bg-card' : 'border-slate-200 bg-white'
             )}>
+              {/* Message Input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && inputMessage.trim() && handleSendMessage()}
+                  placeholder="Ask a question..."
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-lg text-sm border",
+                    theme === 'dark'
+                      ? 'bg-secondary border-border text-white placeholder:text-slate-500'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400'
+                  )}
+                />
+                <button
+                  onClick={() => inputMessage.trim() && handleSendMessage()}
+                  disabled={!inputMessage.trim()}
+                  className={cn(
+                    'p-2 rounded-lg transition-colors',
+                    inputMessage.trim()
+                      ? theme === 'dark'
+                        ? 'bg-primary text-white hover:bg-primary/80'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : theme === 'dark'
+                        ? 'bg-secondary text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  )}
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={requestHint}
