@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   ArrowLeft, MapPin, Clock, Briefcase, DollarSign, Building2,
-  CheckCircle2, Users, Calendar, Loader2,
+  CheckCircle2, Users, Calendar, Loader2, Download, XCircle,
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -74,7 +74,7 @@ export function JobDetailPage() {
       setApplication(result)
       setApplied(true)
       if (result.status === 'screening_passed') {
-        toast.success('Application submitted! AI screening passed — you can now schedule your assessment.')
+        toast.success('Application submitted! AI screening passed — your test credentials are ready.')
       } else {
         toast.error('Application submitted. Unfortunately, your CV did not meet the screening threshold for this position.')
       }
@@ -282,72 +282,69 @@ export function JobDetailPage() {
                 )}
 
                 <div className="pt-4 space-y-3">
+                  {applied && application?.status === 'screening_passed' && application.testId && (
+                    <div className="rounded-lg border border-success/30 bg-success/5 p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-success font-semibold">
+                        <CheckCircle2 className="w-5 h-5" />
+                        Screening Passed — Assessment Ready
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Download the desktop app and enter your Test ID to begin your assessment.
+                      </p>
+                      <div className="bg-white/80 rounded-lg p-3 border border-success/20">
+                        <p className="text-xs text-muted-foreground mb-1">Your Test ID</p>
+                        <p className="text-xl font-mono font-bold text-success">{application.testId}</p>
+                      </div>
+                      {application.totalTime && (
+                        <p className="text-xs text-muted-foreground">
+                          Duration: {application.totalTime} minutes
+                        </p>
+                      )}
+                      <a
+                        href={import.meta.env.VITE_ELECTRON_INSTALLER_URL || '/downloads'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-success hover:bg-success/90 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Desktop App
+                      </a>
+                    </div>
+                  )}
+
+                  {applied && application?.status === 'screening_failed' && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-destructive font-semibold">
+                        <XCircle className="w-5 h-5" />
+                        Screening Did Not Pass
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Your CV did not meet the minimum score threshold for this position.
+                      </p>
+                    </div>
+                  )}
+
+                  {!applied && (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleApply}
+                      isLoading={applying}
+                      disabled={job.status !== JobStatus.ACTIVE}
+                    >
+                      {applying ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Screening...</>
+                      ) : (
+                        <>Apply Now</>
+                      )}
+                    </Button>
+                  )}
+
                   {applied && !application && (
                     <p className="text-xs text-center text-muted-foreground">
                       Your application has been submitted
                     </p>
                   )}
-
-                  {applied && application && (
-                    <div className={`text-center text-sm font-medium px-3 py-2 rounded-lg ${application.status === 'screening_passed' ? 'bg-success/10 text-success border border-success/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                      {application.status === 'screening_passed' ? 'Screening Passed' : 'Screening Did Not Pass'}
-                    </div>
-                  )}
-
-                  {applied && application?.screeningDetails && (
-                    <div className="rounded-lg border p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">AI Screening Results</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {application.screeningDetails.overallScore !== undefined && (
-                          <div className="text-center p-2 rounded bg-primary/5 border border-primary/10">
-                            <p className="text-lg font-bold text-primary">{application.screeningDetails.overallScore}</p>
-                            <p className="text-[10px] text-muted-foreground">Overall</p>
-                          </div>
-                        )}
-                        {application.screeningDetails.skillMatchScore !== undefined && (
-                          <div className="text-center p-2 rounded bg-blue-50 border border-blue-100">
-                            <p className="text-lg font-bold text-blue-600">{application.screeningDetails.skillMatchScore}</p>
-                            <p className="text-[10px] text-muted-foreground">Skills</p>
-                          </div>
-                        )}
-                        {application.screeningDetails.experienceMatchScore !== undefined && (
-                          <div className="text-center p-2 rounded bg-purple-50 border border-purple-100">
-                            <p className="text-lg font-bold text-purple-600">{application.screeningDetails.experienceMatchScore}</p>
-                            <p className="text-[10px] text-muted-foreground">Experience</p>
-                          </div>
-                        )}
-                      </div>
-                      {application.screeningDetails.llmFeedback && (
-                        <p className="text-xs text-muted-foreground italic">
-                          "{application.screeningDetails.llmFeedback}"
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {application.screeningDetails.strengths?.map((s) => (
-                          <Badge key={s} variant="success" className="text-[10px] bg-green-50 text-green-700 border-green-200">{s}</Badge>
-                        ))}
-                        {application.screeningDetails.skillGaps?.map((g) => (
-                          <Badge key={g} variant="destructive" className="text-[10px]">{g}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleApply}
-                    isLoading={applying}
-                    disabled={applied || job.status !== JobStatus.ACTIVE}
-                  >
-                    {applying ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Screening...</>
-                    ) : applied ? (
-                      <><CheckCircle2 className="w-4 h-4 mr-2" />Already Applied</>
-                    ) : (
-                      <>Apply Now</>
-                    )}
-                  </Button>
                 </div>
               </CardContent>
             </Card>

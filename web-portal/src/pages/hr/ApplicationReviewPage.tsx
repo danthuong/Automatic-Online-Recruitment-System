@@ -201,18 +201,37 @@ export function ApplicationReviewPage() {
               </Card>
             )}
 
-            {!test && (application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCHEDULED) && (
-              <Card className="border-dashed border-2">
+            {application.status === ApplicationStatus.SCREENING_PASSED && !test && (
+              <Card className="border-dashed border-2 border-success/30">
                 <CardContent className="pt-6 text-center space-y-3">
                   <Calendar className="w-10 h-10 text-muted-foreground mx-auto" />
                   <div>
-                    <p className="font-medium">Schedule Test</p>
-                    <p className="text-sm text-muted-foreground">Test scheduling coming soon</p>
+                    <p className="font-medium">Assessment Ready</p>
+                    <p className="text-sm text-muted-foreground">Test credentials will be available shortly.</p>
                   </div>
-                  <Button variant="outline" disabled size="sm">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Coming Soon
-                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {test && application.status === ApplicationStatus.SCREENING_PASSED && (
+              <Card className="border-success/30 bg-success/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Play className="w-5 h-5 text-success" />
+                    Assessment Ready
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="success">
+                      {test.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">{test.totalTime} min</span>
+                  </div>
+                  <div className="bg-white/80 rounded-lg p-3 border border-success/20">
+                    <p className="text-xs text-muted-foreground mb-1">Test ID</p>
+                    <p className="text-xl font-mono font-bold text-success">{test.testId}</p>
+                  </div>
                 </CardContent>
               </Card>
             )}

@@ -183,7 +183,7 @@ export function HomePage() {
           ))}
         </section>
 
-        {/* Application Pipeline */}
+        {/* Application Pipeline
         {applications.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -215,7 +215,7 @@ export function HomePage() {
               })}
             </div>
           </section>
-        )}
+        )} */}
 
         {/* Recent Applications */}
         <section>

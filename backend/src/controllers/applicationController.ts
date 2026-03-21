@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import https from 'https';
 import { ApplicationService } from '../services/applicationService';
+import { TestService } from '../services/testService';
 import { ApplicationStatus } from '../types';
 import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -115,7 +116,45 @@ export const create = asyncHandler(
       : ApplicationStatus.SCREENING_FAILED;
 
     const application = await ApplicationService.create(candidateId, jobId, aiResult, initialStatus);
-    ApiResponse.created(res, application, 'Application submitted successfully');
+
+    let testId: string | undefined;
+    let testTotalTime: number | undefined;
+
+    if (initialStatus === ApplicationStatus.SCREENING_PASSED) {
+      try {
+        const testResult = await TestService.autoCreateTest(application.id, candidateId, jobId);
+        testId = testResult.testId;
+        testTotalTime = testResult.totalTime;
+      } catch (err) {
+        console.error('Failed to auto-create test session:', err);
+      }
+    }
+
+    const response: Record<string, unknown> = {
+      id: application.id,
+      candidateId: application.candidateId,
+      jobId: application.jobId,
+      status: application.status,
+      cvScore: application.cvScore,
+      screeningFeedback: application.screeningFeedback,
+      screeningDetails: application.screeningDetails,
+      hrNotes: application.hrNotes,
+      hrDecision: application.hrDecision,
+      appliedAt: application.appliedAt,
+      screenedAt: application.screenedAt,
+      createdAt: application.createdAt,
+      candidate: application.candidate,
+      job: application.job,
+    };
+
+    if (testId) {
+      response.testId = testId;
+      response.totalTime = testTotalTime;
+    }
+
+    console.log('[create] Final response status:', response.status, 'testId:', testId);
+
+    ApiResponse.created(res, response, 'Application submitted successfully');
   }
 );
 

@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { Input } from '@/components/ui/input'
 import { applicationService } from '@/services/applicationService'
 import { testService } from '@/services/testService'
 import type { ApplicationResponse } from '@/types/job'
@@ -69,9 +68,6 @@ export function ApplicationDetailPage() {
   const [application, setApplication] = useState<ApplicationResponse | null>(null)
   const [test, setTest] = useState<TestResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scheduleLoading, setScheduleLoading] = useState(false)
-  const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleTime, setScheduleTime] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -90,21 +86,6 @@ export function ApplicationDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id, navigate])
-
-  const handleSchedule = async () => {
-    if (!scheduleDate || !scheduleTime) {
-      toast.error('Please select both a date and time')
-      return
-    }
-    setScheduleLoading(true)
-    try {
-      toast.success('Test scheduled! (Scheduling endpoint coming soon)')
-    } catch {
-      toast.error('Failed to schedule test')
-    } finally {
-      setScheduleLoading(false)
-    }
-  }
 
   if (loading || !application) {
     return (
@@ -354,12 +335,12 @@ export function ApplicationDetailPage() {
           </Card>
         )}
 
-        {(application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCHEDULED) && (
-              <Card>
+        {application.status === ApplicationStatus.SCREENING_PASSED && (
+              <Card className="border-success/30 bg-success/5">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Play className="w-5 h-5" />
-                    Technical Assessment
+                    <Play className="w-5 h-5 text-success" />
+                    Assessment Ready
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -382,12 +363,22 @@ export function ApplicationDetailPage() {
                         )}
                       </div>
 
+                      <div className="bg-white/80 rounded-lg p-3 border border-success/20">
+                        <p className="text-xs text-muted-foreground mb-1">Your Test ID</p>
+                        <p className="text-xl font-mono font-bold text-success">{test.testId}</p>
+                      </div>
+
                       {test.status === TestStatus.READY && (
                         <div className="flex gap-3">
-                          <Button className="flex-1">
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Electron App
-                          </Button>
+                          <a
+                            href={import.meta.env.VITE_ELECTRON_INSTALLER_URL || '/downloads'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 flex-1 px-4 py-2.5 bg-success hover:bg-success/90 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download Desktop App
+                          </a>
                           <Button variant="outline" className="flex-1">
                             <Play className="w-4 h-4 mr-2" />
                             Start Test
@@ -421,31 +412,8 @@ export function ApplicationDetailPage() {
                   ) : (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Congratulations on passing the screening! Schedule your technical assessment below.
+                        Congratulations on passing the screening! Your test credentials will be available shortly.
                       </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Select Date</label>
-                          <Input
-                            type="date"
-                            value={scheduleDate}
-                            onChange={(e) => setScheduleDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Select Time</label>
-                          <Input
-                            type="time"
-                            value={scheduleTime}
-                            onChange={(e) => setScheduleTime(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <Button onClick={handleSchedule} isLoading={scheduleLoading} className="w-full">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Schedule Test
-                      </Button>
                     </>
                   )}
                 </CardContent>

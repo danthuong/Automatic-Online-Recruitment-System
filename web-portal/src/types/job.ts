@@ -81,6 +81,8 @@ export interface ApplicationResponse {
   jobId: string
   job?: JobResponse
   status: ApplicationStatus
+  testId?: string
+  totalTime?: number
   cvScore?: number
   screeningFeedback?: string
   screeningDetails?: {

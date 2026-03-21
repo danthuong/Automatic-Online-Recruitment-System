@@ -562,12 +562,21 @@ Valid statuses: `draft`, `active`, `paused`, `closed`.
 
 Apply to a job. **Candidate only.**
 
-On apply, the backend calls the AI Matching Service (`AI_MATCHING_URL`) with the candidate's CV and job description to perform instant CV screening. The `overallScore` returned by the AI service is compared against `SCREENING_THRESHOLD` (default: 70, configurable via `SCREENING_THRESHOLD` env var):
+On apply, the backend performs the following steps:
 
-- `overallScore >= SCREENING_THRESHOLD` → application status is set to `screening_passed`
-- `overallScore < SCREENING_THRESHOLD` → application status is set to `screening_failed`
+1. **AI CV Screening** — calls AI Matching Service (`AI_MATCHING_URL`) with candidate CV and job description. The `overallScore` is compared against `SCREENING_THRESHOLD` (default: 70, configurable via `SCREENING_THRESHOLD` env var):
+   - `>= SCREENING_THRESHOLD` → `screening_passed`
+   - `< SCREENING_THRESHOLD` → `screening_failed`
 
-AI results are stored in `screeningDetails` and returned immediately.
+2. **Auto Test Creation (pass only)** — if screening passes, the backend automatically:
+   - Fetches the candidate's GitHub profile via `GITHUB_PROFILE_URL`
+   - Calls `INTERVIEW_GENERATE_URL` with candidate name, GitHub data, and job description to generate 5 interview questions
+   - Stores the questions in the database and links them to the test session
+   - Creates a `Test` record with status `ready` and the generated `testId`
+
+3. **Response** — returns the application with `testId` and `totalTime` included (if passed).
+
+> If any AI service call fails, the application is still created. Test creation failures are logged but do not block the response.
 
 **Headers:** `Authorization: Bearer <access_token>`
 
@@ -581,7 +590,7 @@ AI results are stored in `screeningDetails` and returned immediately.
 
 > Cannot apply to the same job twice. Job must be `active`.
 
-**Response (201):** Returns the created application with AI screening results pre-populated.
+**Response (201):**
 
 ```json
 {
@@ -592,6 +601,8 @@ AI results are stored in `screeningDetails` and returned immediately.
     "candidateId": "...",
     "jobId": "...",
     "status": "screening_passed | screening_failed",
+    "testId": "TEST-XXXXXXXX",      // only present when screening_passed
+    "totalTime": 60,                // only present when screening_passed
     "screeningDetails": {
       "overallScore": 79,
       "skillMatchScore": 85,

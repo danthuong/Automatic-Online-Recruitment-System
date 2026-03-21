@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -55,6 +56,8 @@ app.use(generalLimiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/downloads', express.static(path.join(__dirname, process.env.ELECTRON_INSTALLER_PATH ?? '../../electron-client/release')));
 
 app.get('/api/v1/health', (req, res) => {
   res.json({ success: true, message: 'OK', timestamp: new Date().toISOString() });
