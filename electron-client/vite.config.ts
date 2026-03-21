@@ -46,5 +46,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true
+  },
+  optimizeDeps: {
+    exclude: ['/vision_bundle.mjs']
+  },
+  server: {
+    fs: {
+      allow: ['..']
+    }
   }
 })

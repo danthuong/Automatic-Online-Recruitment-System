@@ -171,20 +171,14 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
             )}>
               AI Interviewer
             </div>
-            <div className={cn(
+            <div             className={cn(
               "text-xs flex items-center gap-1",
               theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
             )}>
               <span className={cn(
-                "w-2 h-2 rounded-full",
-                isConnecting ? 'bg-yellow-500 animate-pulse' :
-                healthStatus?.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'
+                "w-2 h-2 rounded-full bg-green-500"
               )} />
-              {isConnecting
-                ? 'Connecting...'
-                : healthStatus?.status === 'healthy'
-                  ? `${healthStatus.llm_provider}: ${healthStatus.model}`
-                  : 'Offline'}
+              Online (Local AI)
             </div>
           </div>
         </div>

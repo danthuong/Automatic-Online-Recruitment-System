@@ -23,15 +23,16 @@ import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
 import { cn } from '@/renderer/lib/utils'
 import { InputTracker } from '@/renderer/input-tracker'
 import { useTheme } from '@/renderer/hooks/useTheme'
-import {
-  ChevronLeft,
-  ChevronRight,
-  Flag,
-  Send,
-  AlertTriangle,
-  ShieldX,
-  Code2,
-  Bot,
+import { localProctorService } from '@/renderer/services/local-proctor-service'
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Flag, 
+  Send, 
+  AlertTriangle, 
+  ShieldX, 
+  Code2, 
+  Bot, 
   PanelRightClose,
   PanelRightOpen,
   FileText,
@@ -338,6 +339,28 @@ export function ExamScreen() {
       setShowDisqualifyDialog(false)
     }
   }, [status])
+
+  useEffect(() => {
+    if (!aiStream0 || !aiStream1) return;
+
+    console.log('[ExamScreen] Proctor setup - aiStream0 active:', aiStream0.active, 'aiStream1 active:', aiStream1.active);
+    if (videoRef0.current) videoRef0.current.srcObject = aiStream0;
+    if (videoRef1.current) videoRef1.current.srcObject = aiStream1;
+
+    localProctorService.setCallbacks(
+      (state) => setAIProctorState(state),
+      (alert) => handleAIAlert(alert)
+    );
+
+    localProctorService.connect(aiStream1, aiStream0).catch((err) => {
+      console.error('[ExamScreen] AI service connection failed:', err);
+    });
+
+    return () => {
+      console.log('[ExamScreen] Cleanup - stopping proctor');
+      localProctorService.stop();
+    };
+  }, [aiStream0, aiStream1, setAIProctorState, handleAIAlert])
 
   useEffect(() => {
     if (showWarningDialog) {
@@ -713,6 +736,58 @@ export function ExamScreen() {
             ? 'bg-card/30 border-border backdrop-blur-sm' 
             : 'bg-white border-slate-200'
         )}>
+          {/* AI Camera Preview */}
+          <div className="space-y-2">
+            <h3 className={cn(
+              "text-sm font-medium",
+              theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+            )}>
+              AI Cameras
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
+                <video
+                  ref={videoRef0}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
+                  <Hand className="w-3 h-3" />
+                  Hand
+                </div>
+                {aiProctorState && (
+                  <div className={cn(
+                    'absolute top-1 right-1 w-2 h-2 rounded-full',
+                    aiProctorState.handsDetected > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'
+                  )} />
+                )}
+              </div>
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
+                <video
+                  ref={videoRef1}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  Face
+                </div>
+                {aiProctorState && (
+                  <div className={cn(
+                    'absolute top-1 right-1 w-2 h-2 rounded-full',
+                    aiProctorState.faceCount === 1 ? 'bg-green-500 animate-pulse' :
+                    aiProctorState.faceCount === 0 ? 'bg-red-500' : 'bg-red-500 animate-pulse'
+                  )} />
+                )}
+              </div>
+            </div>
+            {aiProctorState && <AIOverlay state={aiProctorState} />}
+          </div>
+
           {/* Question Navigator */}
           <div className="space-y-2">
             <h3 className={cn(

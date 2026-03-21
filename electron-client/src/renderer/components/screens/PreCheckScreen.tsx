@@ -20,8 +20,7 @@ import {
   Fingerprint,
   Bot,
 } from 'lucide-react'
-import { aiProctorService } from '@/renderer/services/ai-proctor-service'
-import { getAIServerUrl, getCachedServerUrl } from '@/renderer/services/ai-server'
+import { localProctorService } from '@/renderer/services/local-proctor-service'
 import type { AIProctorState } from '@/renderer/services/ai-proctor-types'
 
 interface ChecklistItem {
@@ -70,9 +69,9 @@ export function PreCheckScreen() {
       status: 'pending',
     },
     { 
-      id: 'aiserver', 
-      label: 'AI Server', 
-      description: 'Python AI server for face/gesture detection',
+      id: 'aimodels', 
+      label: 'AI Models', 
+      description: 'Local AI models for face & hand detection',
       icon: Bot, 
       status: 'pending',
     },
@@ -83,7 +82,7 @@ export function PreCheckScreen() {
       icon: Wifi, 
       status: 'pending',
       autoCheck: async () => {
-        return navigator.onLine; // Kiểm tra xem máy tính có mạng không
+        return navigator.onLine;
       }
     },
     { 
@@ -110,12 +109,22 @@ export function PreCheckScreen() {
   const [mediaReady, setMediaReady] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
   const [aiServerReady, setAiServerReady] = useState(false)
-  const [serverUrl, setServerUrl] = useState<string | null>(null)
   const [aiState, setAiState] = useState<AIProctorState | null>(null)
   const [calibrationPhase, setCalibrationPhase] = useState(false)
   const [calibrationProgress, setCalibrationProgress] = useState(0)
+  const [modelsReady, setModelsReady] = useState(false)
+  const [modelsLoading, setModelsLoading] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
   const stream0Ref = useRef<MediaStream | null>(null)
   const stream1Ref = useRef<MediaStream | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+
+  useEffect(() => {
+    console.log('[PreCheckScreen] Mount. DOM videos:', document.querySelectorAll('video').length);
+    return () => {
+      localProctorService.stop();
+    }
+  }, [])
 
   useEffect(() => {
     checklist.forEach(async (item) => {
@@ -138,6 +147,7 @@ export function PreCheckScreen() {
   }
 
   const handleStreamsReady = useCallback((stream0: MediaStream, stream1: MediaStream) => {
+    console.log('[PreCheckScreen] Streams ready - stream0 active:', stream0.active, 'stream1 active:', stream1.active);
     stream0Ref.current = stream0
     stream1Ref.current = stream1
     setCameraReady(true)
@@ -162,21 +172,9 @@ export function PreCheckScreen() {
   }, [])
 
   const startAIServerCheck = useCallback(async () => {
-    updateChecklist('aiserver', 'checking')
-    try {
-      const url = await getAIServerUrl()
-      setServerUrl(url)
-      const healthy = await aiProctorService.healthCheck()
-      setAiServerReady(healthy)
-      updateChecklist('aiserver', healthy ? 'passed' : 'failed')
-      return healthy
-    } catch {
-      const cached = getCachedServerUrl()
-      setServerUrl(cached)
-      setAiServerReady(false)
-      updateChecklist('aiserver', 'failed')
-      return false
-    }
+    updateChecklist('aimodels', 'passed')
+    setAiServerReady(true)
+    return true
   }, [])
 
   const startCalibration = useCallback(async () => {
@@ -185,27 +183,26 @@ export function PreCheckScreen() {
       return
     }
 
-    if (!aiServerReady) {
-      alert('AI Server is not running. Please start it first.')
+    if (!modelsReady) {
+      alert('AI models not loaded. Please load models first.')
       return
     }
 
+    if (isConnecting) return
+
+    setIsConnecting(true)
     setCalibrationPhase(true)
     setCalibrationProgress(0)
 
     try {
-      await aiProctorService.resetCalibration()
-      
-      await aiProctorService.connect(
-        stream0Ref.current,
-        stream1Ref.current,
+      localProctorService.resetCalibration()
+      localProctorService.setCallbacks(
         (state) => {
           setAiState(state)
           setAIProctorState(state)
-          
+
           if (state.calibrationStatus === 'calibrating') {
             const progress = state.calibrationProgress || 0;
-            // setCalibrationProgress(state.faceCount > 0 ? Math.min(100, (state.faceCount / CALIBRATION_REQUIRED_FRAMES) * 100) : 0)
             setCalibrationProgress(Math.min(100, (progress / CALIBRATION_REQUIRED_FRAMES) * 100))
           } else if (state.calibrationStatus === 'calibrated') {
             setCalibrationProgress(100)
@@ -215,48 +212,73 @@ export function PreCheckScreen() {
           handleAIAlert(alert)
         }
       )
+
+      await localProctorService.connect(stream1Ref.current, stream0Ref.current)
     } catch (err) {
       console.error('[PreCheck] AI connection failed:', err)
-      alert('Failed to connect to AI server. Make sure the server is running.')
+      alert('Failed to start AI proctoring engine.')
       setCalibrationPhase(false)
+      setIsConnecting(false)
     }
-  }, [aiServerReady, setAIProctorState, handleAIAlert])
+  }, [modelsReady, isConnecting, setAIProctorState, handleAIAlert])
 
   useEffect(() => {
     if (aiState?.calibrationStatus === 'calibrated' && calibrationPhase) {
       const timer = setTimeout(() => {
         setCalibrationPhase(false)
-        aiProctorService.stop()
+        setIsConnecting(false)
+        localProctorService.stop()
       }, 2000)
       return () => clearTimeout(timer)
     }
   }, [aiState?.calibrationStatus, calibrationPhase])
 
   const stopCalibration = useCallback(() => {
-    aiProctorService.stop()
+    localProctorService.stop()
     setCalibrationPhase(false)
+    setIsConnecting(false)
     setAiState(null)
     setCalibrationProgress(0)
     setAIProctorState(null)
   }, [setAIProctorState])
 
+  const loadModels = useCallback(async () => {
+    updateChecklist('aimodels', 'checking')
+    setModelsLoading(true)
+    setModelsError(null)
+    try {
+      await localProctorService.initializeModels()
+      setModelsReady(true)
+      setAiServerReady(true)
+      updateChecklist('aimodels', 'passed')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load AI models'
+      setModelsError(msg)
+      setModelsReady(false)
+      setAiServerReady(false)
+      updateChecklist('aimodels', 'failed')
+    } finally {
+      setModelsLoading(false)
+    }
+  }, [])
+
   const systemChecksPassed = checklist
-    .filter(item => item.id !== 'camera' && item.id !== 'aiserver')
+    .filter(item => item.id !== 'camera' && item.id !== 'aimodels')
     .every(item => item.status === 'passed')
 
-  const allPassed = systemChecksPassed && cameraReady && aiServerReady && aiState?.calibrationStatus === 'calibrated' && agreed
+  const allPassed = systemChecksPassed && cameraReady && modelsReady && aiState?.calibrationStatus === 'calibrated' && agreed
 
   const handleStartExam = async () => {
     if (!cameraReady) {
       alert('Please start cameras first.')
       return
     }
-    if (!aiServerReady || aiState?.calibrationStatus !== 'calibrated') {
-      alert('Please connect to AI server and complete calibration.')
+    if (!modelsReady || aiState?.calibrationStatus !== 'calibrated') {
+      alert('Please load AI models and complete calibration.')
       return
     }
 
-    aiProctorService.stop()
+    localProctorService.stop()
 
     try {
       if (window.electronAPI) {
@@ -271,10 +293,10 @@ export function PreCheckScreen() {
     }
   }
 
-  const steps = ['Cameras', 'AI Server', 'Calibrate', 'Agreement']
+  const steps = ['Cameras', 'AI Models', 'Calibrate', 'Agreement']
   const completedSteps = [
     cameraReady,
-    aiServerReady,
+    modelsReady,
     aiState?.calibrationStatus === 'calibrated',
     agreed,
   ]
@@ -354,7 +376,6 @@ export function PreCheckScreen() {
         className="px-6 py-8"
       >
         <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
-          {/* Left - Camera Setup */}
           <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
             <div className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center gap-3 mb-6">
@@ -385,32 +406,22 @@ export function PreCheckScreen() {
                 />
                 <StatusCard
                   icon={Bot}
-                  label="AI Server"
-                  status={aiServerReady ? 'passed' : aiServerReady === false ? 'failed' : 'pending'}
+                  label="AI Models"
+                  status={modelsReady ? 'passed' : modelsLoading ? 'pending' : 'failed'}
                 />
               </div>
 
-              {aiServerReady === false && (
+              {modelsError && (
                 <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-red-600">
-                        AI Server Not Detected
+                        AI Models Failed to Load
                       </p>
                       <p className="text-xs text-red-500/80 mt-1">
-                        Please start the AI server first:
+                        {modelsError}
                       </p>
-                      <p className="text-xs mt-1">
-                        <code className="bg-red-500/20 text-red-600 px-1.5 py-0.5 rounded text-[11px]">
-                          ai\start_server.bat
-                        </code>
-                      </p>
-                      {serverUrl && (
-                        <p className="text-xs text-red-500/80 mt-2">
-                          Server: <code className="bg-red-500/20 text-red-500 px-1 py-0.5 rounded text-[10px]">{serverUrl}</code>
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -478,26 +489,31 @@ export function PreCheckScreen() {
                 <div className="space-y-4">
                   <div className="flex gap-2">
                     <Button
-                      onClick={startAIServerCheck}
+                      onClick={loadModels}
                       variant="outline"
-                      disabled={aiServerReady}
+                      disabled={modelsReady || modelsLoading}
                       className="flex-1"
                     >
-                      {aiServerReady ? (
+                      {modelsLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Loading Models...
+                        </>
+                      ) : modelsReady ? (
                         <>
                           <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
-                          Server Connected
+                          Models Loaded
                         </>
                       ) : (
                         <>
                           <Bot className="w-4 h-4 mr-2" />
-                          Check AI Server
+                          Load AI Models
                         </>
                       )}
                     </Button>
                     <Button
                       onClick={startCalibration}
-                      disabled={!cameraReady || !aiServerReady}
+                      disabled={!cameraReady || !modelsReady || isConnecting}
                       className="flex-1"
                       variant={aiState?.calibrationStatus === 'calibrated' ? "secondary" : "default"}
                     >
@@ -534,7 +550,6 @@ export function PreCheckScreen() {
             </div>
           </motion.div>
 
-          {/* Right - System Checks & Agreement */}
           <motion.div variants={itemVariants} className="space-y-6">
             <div className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -553,7 +568,7 @@ export function PreCheckScreen() {
 
               <div className="space-y-3">
                 {checklist
-                  .filter((item) => item.id !== 'camera' && item.id !== 'aiserver')
+                  .filter((item) => item.id !== 'camera' && item.id !== 'aimodels')
                   .map((item) => {
                     const Icon = item.icon
                     return (

@@ -2,7 +2,6 @@ import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Video, VideoOff, AlertCircle, Loader2 } from 'lucide-react'
 import { cn } from '@/renderer/lib/utils'
 import { Button } from '@/renderer/components/ui/button'
-import { PhoneCameraConnector } from './PhoneCameraConnector'
 
 interface MultiCameraCaptureProps {
   onStreamsReady?: (stream0: MediaStream, stream1: MediaStream) => void
@@ -54,11 +53,34 @@ export function MultiCameraCapture({
         return
       }
 
-      const faceCamera = videoDevices[0]
-      setCamera0Info({ id: faceCamera.deviceId, label: faceCamera.label || 'Face Camera', stream: null, error: null })
-      setCamera1Info({ id: null, label: 'Phone Camera', stream: null, error: null })
+      if (videoDevices.length < 2) {
+        setCamera0Info({
+          id: videoDevices[0].deviceId,
+          label: videoDevices[0].label || 'Camera 1',
+          stream: null,
+          error: null
+        })
+        setCamera1Info({ id: null, label: '', stream: null, error: 'Please connect iVCam as Camera 2 (USB cable).' })
+        setLoading(false)
+        return
+      }
 
-      const constraints0: MediaStreamConstraints = {
+      const faceCamera = videoDevices[1]
+      const handCamera = videoDevices[0]
+      setCamera0Info({ id: handCamera.deviceId, label: handCamera.label || 'Hand Camera (iVCam)', stream: null, error: null })
+      setCamera1Info({ id: faceCamera.deviceId, label: faceCamera.label || 'Face Camera', stream: null, error: null })
+
+      const mediaStream0 = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: handCamera.deviceId ? { exact: handCamera.deviceId } : undefined,
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 },
+          facingMode: 'environment',
+        },
+        audio: false,
+      })
+
+      const mediaStream1 = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: faceCamera.deviceId ? { exact: faceCamera.deviceId } : undefined,
           width: { ideal: 640, min: 320 },
@@ -66,28 +88,24 @@ export function MultiCameraCapture({
           facingMode: 'user',
         },
         audio: false,
-      }
+      })
 
-      const mediaStream0 = await navigator.mediaDevices.getUserMedia(constraints0)
       setStream0(mediaStream0)
+      setStream1(mediaStream1)
       setCamera0Info((prev) => ({ ...prev, stream: mediaStream0 }))
+      setCamera1Info((prev) => ({ ...prev, stream: mediaStream1 }))
 
       if (videoRef0.current) {
         videoRef0.current.srcObject = mediaStream0
         await videoRef0.current.play()
       }
+      if (videoRef1.current) {
+        videoRef1.current.srcObject = mediaStream1
+        await videoRef1.current.play()
+      }
 
       setIsActive(true)
-      // onStreamsReady?.(mediaStream0, mediaStream0)
-      setStream1((currentStream1) => {
-        if (currentStream1) {
-           onStreamsReady?.(mediaStream0, currentStream1)
-        } else {
-           // Nếu chưa có stream1 thì cứ gửi stream0, stream1 sẽ null (tùy thuộc vào store của bạn)
-           onStreamsReady?.(mediaStream0, mediaStream0) // Hoặc sửa lại logic này nếu store bạn cần
-        }
-        return currentStream1;
-      })
+      onStreamsReady?.(mediaStream0, mediaStream1)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access camera'
       setCamera0Info((prev) => ({ ...prev, error: errorMessage }))
@@ -97,46 +115,22 @@ export function MultiCameraCapture({
     }
   }, [enumerateCameras, onStreamsReady, onError])
 
-  const handlePhoneStreamReady = useCallback(
-    (phoneStream: MediaStream) => {
-      setStream1(phoneStream)
-      setCamera1Info({ id: null, label: 'Phone Camera', stream: phoneStream, error: null })
-
-      if (videoRef1.current) {
-        videoRef1.current.srcObject = phoneStream
-        videoRef1.current.play().catch(() => {})
-      }
-
-      // if (stream0) {
-      //   onStreamsReady?.(stream0, phoneStream)
-      // }
-      setStream0((currentStream0) => {
-        if (currentStream0) {
-          onStreamsReady?.(currentStream0, phoneStream)
-        }
-        return currentStream0;
-      })
-    },
-    [onStreamsReady]
-  )
-
   const stopCapture = useCallback(() => {
-    // if (stream0) {
-    //   stream0.getTracks().forEach((t) => t.stop())
-    //   setStream0(null)
-    // }
-    // if (stream1) {
-    //   stream1.getTracks().forEach((t) => t.stop())
-    //   setStream1(null)
-    // }
+    if (stream0) {
+      stream0.getTracks().forEach((t) => t.stop())
+    }
+    if (stream1) {
+      stream1.getTracks().forEach((t) => t.stop())
+    }
+    setStream0(null)
+    setStream1(null)
     if (videoRef0.current) videoRef0.current.srcObject = null
     if (videoRef1.current) videoRef1.current.srcObject = null
-
     setIsActive(false)
-    // setCamera0Info((prev) => ({ ...prev, stream: null }))
-    // setCamera1Info((prev) => ({ ...prev, stream: null }))
+    setCamera0Info((prev) => ({ ...prev, stream: null }))
+    setCamera1Info((prev) => ({ ...prev, stream: null }))
     onStreamStopped?.()
-  }, [onStreamStopped])
+  }, [stream0, stream1, onStreamStopped])
 
   useEffect(() => {
     startCapture()
@@ -153,9 +147,9 @@ export function MultiCameraCapture({
   return (
     <div className={cn('space-y-4', className)}>
       <div className="grid grid-cols-2 gap-4">
-        {[
-          { ref: videoRef0, info: camera0Info, name: 'Face Camera' },
-          { ref: videoRef1, info: camera1Info, name: 'Hand Camera' },
+          {[
+          { ref: videoRef0, info: camera0Info, name: 'Hand Camera (iVCam)' },
+          { ref: videoRef1, info: camera1Info, name: 'Face Camera (Webcam)' },
         ].map((cam, idx) => (
           <div key={idx} className="relative aspect-video rounded-xl overflow-hidden bg-slate-900">
             {loading && (
@@ -169,7 +163,7 @@ export function MultiCameraCapture({
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                 <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
                 <p className="text-sm text-red-400 text-center px-4">{cam.info.error}</p>
-                {cam.name === 'Face Camera' && (
+                {idx === 0 && (
                   <Button onClick={handleRetryCamera} variant="outline" size="sm" className="mt-3 text-white border-white/50">
                     Retry
                   </Button>
@@ -182,7 +176,7 @@ export function MultiCameraCapture({
                 <Video className="h-12 w-12 text-slate-500 mb-3" />
                 <p className="text-sm text-slate-400">{cam.name}</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {cam.name === 'Hand Camera' ? 'Scan QR code below' : 'Starting...'}
+                  {idx === 1 ? 'Connect iVCam via USB cable' : 'Starting...'}
                 </p>
               </div>
             )}
@@ -192,12 +186,7 @@ export function MultiCameraCapture({
               autoPlay
               playsInline
               muted
-              style={idx === 1 ? { transform: 'rotate(90deg) scale(1.8)' } : undefined}
-              // 2. Class CSS mặc định (Face camera thì xài Tailwind scale-x-[-1])
-              className={cn(
-                'w-full h-full object-cover transition-transform duration-300',
-                idx === 0 ? 'transform scale-x-[-1]' : '' 
-              )}
+              className="w-full h-full object-cover transition-transform duration-300"
             />
 
             {idx === 0 && hasFaceCamera && (
@@ -228,7 +217,20 @@ export function MultiCameraCapture({
         ))}
       </div>
 
-      <PhoneCameraConnector onStreamReady={handlePhoneStreamReady} onError={onError ?? (() => {})} />
+      <div className={cn(
+        'p-3 rounded-lg text-xs',
+        stream0 && stream1
+          ? 'bg-green-500/10 text-green-600 border border-green-500/30'
+          : 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
+      )}>
+        {stream0 && stream1 ? (
+          <span>Both cameras connected. iVCam is ready for hand detection.</span>
+        ) : stream0 && !stream1 ? (
+          <span>Face camera connected. Please connect iVCam via USB cable for hand detection.</span>
+        ) : (
+          <span>Waiting for cameras...</span>
+        )}
+      </div>
     </div>
   )
 }
