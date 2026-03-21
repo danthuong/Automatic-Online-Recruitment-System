@@ -78,7 +78,16 @@ export function MultiCameraCapture({
       }
 
       setIsActive(true)
-      onStreamsReady?.(mediaStream0, mediaStream0)
+      // onStreamsReady?.(mediaStream0, mediaStream0)
+      setStream1((currentStream1) => {
+        if (currentStream1) {
+           onStreamsReady?.(mediaStream0, currentStream1)
+        } else {
+           // Nếu chưa có stream1 thì cứ gửi stream0, stream1 sẽ null (tùy thuộc vào store của bạn)
+           onStreamsReady?.(mediaStream0, mediaStream0) // Hoặc sửa lại logic này nếu store bạn cần
+        }
+        return currentStream1;
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access camera'
       setCamera0Info((prev) => ({ ...prev, error: errorMessage }))
@@ -98,30 +107,36 @@ export function MultiCameraCapture({
         videoRef1.current.play().catch(() => {})
       }
 
-      if (stream0) {
-        onStreamsReady?.(stream0, phoneStream)
-      }
+      // if (stream0) {
+      //   onStreamsReady?.(stream0, phoneStream)
+      // }
+      setStream0((currentStream0) => {
+        if (currentStream0) {
+          onStreamsReady?.(currentStream0, phoneStream)
+        }
+        return currentStream0;
+      })
     },
-    [stream0, onStreamsReady]
+    [onStreamsReady]
   )
 
   const stopCapture = useCallback(() => {
-    if (stream0) {
-      stream0.getTracks().forEach((t) => t.stop())
-      setStream0(null)
-    }
-    if (stream1) {
-      stream1.getTracks().forEach((t) => t.stop())
-      setStream1(null)
-    }
+    // if (stream0) {
+    //   stream0.getTracks().forEach((t) => t.stop())
+    //   setStream0(null)
+    // }
+    // if (stream1) {
+    //   stream1.getTracks().forEach((t) => t.stop())
+    //   setStream1(null)
+    // }
     if (videoRef0.current) videoRef0.current.srcObject = null
     if (videoRef1.current) videoRef1.current.srcObject = null
 
     setIsActive(false)
-    setCamera0Info((prev) => ({ ...prev, stream: null }))
-    setCamera1Info((prev) => ({ ...prev, stream: null }))
+    // setCamera0Info((prev) => ({ ...prev, stream: null }))
+    // setCamera1Info((prev) => ({ ...prev, stream: null }))
     onStreamStopped?.()
-  }, [stream0, stream1, onStreamStopped])
+  }, [onStreamStopped])
 
   useEffect(() => {
     startCapture()
@@ -177,9 +192,11 @@ export function MultiCameraCapture({
               autoPlay
               playsInline
               muted
+              style={idx === 1 ? { transform: 'rotate(90deg) scale(1.8)' } : undefined}
+              // 2. Class CSS mặc định (Face camera thì xài Tailwind scale-x-[-1])
               className={cn(
-                'w-full h-full object-cover',
-                idx === 0 ? 'transform scale-x-[-1]' : ''
+                'w-full h-full object-cover transition-transform duration-300',
+                idx === 0 ? 'transform scale-x-[-1]' : '' 
               )}
             />
 

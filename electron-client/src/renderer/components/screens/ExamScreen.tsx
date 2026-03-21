@@ -126,12 +126,22 @@ export function ExamScreen() {
   }, [status])
 
   useEffect(() => {
-    if (status === 'exam' && aiStream0 && aiStream1) {
-      if (videoRef0.current) videoRef0.current.srcObject = aiStream0
-      if (videoRef1.current) videoRef1.current.srcObject = aiStream1
-      if (videoRef0.current) videoRef0.current.play().catch(() => {})
-      if (videoRef1.current) videoRef1.current.play().catch(() => {})
-
+    if (videoRef0.current && aiStream0) {
+      videoRef0.current.srcObject = aiStream0
+      videoRef0.current.play().catch(console.error)
+    }
+    if (videoRef1.current && aiStream1) {
+      videoRef1.current.srcObject = aiStream1
+      videoRef1.current.play().catch(console.error)
+    }
+  }, [aiStream0, aiStream1])
+    // if (status === 'exam' && aiStream0 && aiStream1) {
+    //   if (videoRef0.current) videoRef0.current.srcObject = aiStream0
+    //   if (videoRef1.current) videoRef1.current.srcObject = aiStream1
+    //   if (videoRef0.current) videoRef0.current.play().catch(() => {})
+    //   if (videoRef1.current) videoRef1.current.play().catch(() => {})
+  useEffect(() => {
+    if (aiStream0 && aiStream1) {
       aiProctorService.connect(
         aiStream0,
         aiStream1,
@@ -543,6 +553,7 @@ export function ExamScreen() {
                   autoPlay
                   playsInline
                   muted
+                  style={{transform: 'rotate(90deg) scale(1.8)'}}
                   className="w-full h-full object-cover transform scale-x-[-1]"
                 />
                 <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">

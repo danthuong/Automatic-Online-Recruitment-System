@@ -33,6 +33,7 @@ export interface AIProctorResponse {
 export interface AIProctorState {
   isConnected: boolean
   calibrationStatus: 'idle' | 'calibrating' | 'calibrated' | 'failed'
+  calibrationProgress: number
   faceCount: number
   gaze: { x: number; y: number } | null
   headAngle: { pitch: number; yaw: number } | null

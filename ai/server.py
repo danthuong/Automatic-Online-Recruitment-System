@@ -90,7 +90,8 @@ async def phone_join(sid, data):
     print(f"[Signaling] Phone joined: {sid}, data: {data}")
     await sio.enter_room(sid, 'exam-room')
     await sio.emit('phone_joined', {'phoneId': sid, 'type': data.get('type', 'hand_camera')}, room='exam-room', skip_sid=sid)
-    await sio.emit('exam_ready', room='exam-room', skip_sid=sid)
+    # await sio.emit('exam_ready', room='exam-room', skip_sid=sid)
+    await sio.emit('exam_ready', to = sid)
     print(f"[Signaling] Phone {sid} joined exam-room")
 
 
@@ -99,6 +100,7 @@ async def exam_join(sid, data=None):
     print(f"[Signaling] Exam client joined: {sid}")
     await sio.enter_room(sid, 'exam-room')
     await sio.emit('exam_joined', {'examId': sid, 'phoneId': sid}, to=sid)
+    await sio.emit('exam_ready', room='exam-room', skip_sid=sid)
     print(f"[Signaling] Exam {sid} joined exam-room")
 
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/renderer/components/ui/button'
 import { cn } from '@/renderer/lib/utils'
+import { io } from 'socket.io-client'
 import { useTheme } from '@/renderer/hooks/useTheme'
 import { Smartphone, Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react'
 import { getAIServerUrl, getCachedServerUrl } from '@/renderer/services/ai-server'
@@ -18,11 +19,11 @@ interface PhoneCameraConnectorProps {
   className?: string
 }
 
-declare global {
-  interface Window {
-    io: any
-  }
-}
+// declare global {
+//   interface Window {
+//     io: any
+//   }
+// }
 
 export function PhoneCameraConnector({
   onStreamReady,
@@ -34,6 +35,7 @@ export function PhoneCameraConnector({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const socketRef = useRef<any>(null)
   const autoConnectRef = useRef(false)
+  const isProcessingOfferRef = useRef(false)
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [phoneUrl, setPhoneUrl] = useState<string>('')
@@ -41,6 +43,7 @@ export function PhoneCameraConnector({
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [isLoadingQr, setIsLoadingQr] = useState(true)
   const [serverUrl, setServerUrl] = useState<string | null>(null)
+  const [isHandLandscape, setIsHandLandscape] = useState(false);
 
   const loadQrCode = useCallback(async () => {
     try {
@@ -110,7 +113,7 @@ export function PhoneCameraConnector({
       }
 
       getAIServerUrl().then((serverUrl) => {
-        const socket = window.io(serverUrl, {
+        const socket = io(serverUrl, {
           transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionAttempts: 10,
@@ -149,28 +152,92 @@ export function PhoneCameraConnector({
           console.log('[PhoneCamera] Exam ready - phone joined')
         })
 
+        let isProcessingOffer = false;
+
+        // socket.on('offer', async (data: any) => {
+        //   console.log('[PhoneCamera] Received offer')
+
+        //   if (isProcessingOffer) {
+        //     console.warn('[PhoneCamera] Overlapping offer ignored');
+        //     return;
+        //   }
+
+        //   isProcessingOffer = true;
+
+        //   const pc = peerConnectionRef.current
+        //   if (!pc) {
+        //     console.log('[PhoneCamera] No peer connection, creating now')
+        //     createPeerConnection()
+        //   }
+
+        //   try {
+        //     const activePc = peerConnectionRef.current
+        //     // if (!activePc) return
+        //     if (!activePc) {
+        //       console.log('[PhoneCamera] No peer connection, creating now')
+        //       createPeerConnection()
+        //       return // Đợi vòng sau
+        //     }
+
+        //     if (activePc.signalingState !== 'stable') {
+        //       console.warn('[PhoneCamera] PC not stable, state:', activePc.signalingState);
+        //       return;
+        //     }
+
+        //     await activePc.setRemoteDescription(new RTCSessionDescription(data.sdp))
+        //     const answer = await activePc.createAnswer()
+        //     await activePc.setLocalDescription(answer)
+        //     // socket.emit('answer', {
+        //     //   sdp: answer.sdp,
+        //     //   type: answer.type,
+        //     // })
+        //     socket.emit('answer', { sdp: answer })
+        //     // socket.emit('answer', answer)
+        //     console.log('[PhoneCamera] Answer sent')
+        //   } catch (err) {
+        //     console.error('[PhoneCamera] Answer error:', err)
+        //   } finally {
+        //     isProcessingOffer = false; // Mở khóa
+        //   }
+        // })
+
         socket.on('offer', async (data: any) => {
           console.log('[PhoneCamera] Received offer')
-          const pc = peerConnectionRef.current
-          if (!pc) {
-            console.log('[PhoneCamera] No peer connection, creating now')
-            createPeerConnection()
+          
+          // 1. KIỂM TRA KHÓA: Nếu đang bận xử lý Offer khác rồi thì chặn luôn!
+          if (isProcessingOfferRef.current) {
+            console.warn('[PhoneCamera] Ignored duplicate offer (locked)')
+            return
           }
+          
+          isProcessingOfferRef.current = true // Sập khóa lại
 
           try {
-            const activePc = peerConnectionRef.current
-            if (!activePc) return
+            let activePc = peerConnectionRef.current
+            if (!activePc) {
+              console.log('[PhoneCamera] No peer connection, creating now')
+              activePc = createPeerConnection()
+            }
 
-            await activePc.setRemoteDescription(new RTCSessionDescription(data))
+            // Bảo hiểm thêm 1 lớp: Nếu PC đang bị kẹt ở trạng thái lạ thì bỏ qua
+            if (activePc.signalingState !== 'stable' && activePc.signalingState !== 'have-remote-offer') {
+              console.warn('[PhoneCamera] PC busy, state:', activePc.signalingState)
+              return
+            }
+
+            // 2. Xử lý luồng chuẩn của WebRTC
+            await activePc.setRemoteDescription(new RTCSessionDescription(data.sdp))
             const answer = await activePc.createAnswer()
             await activePc.setLocalDescription(answer)
-            socket.emit('answer', {
-              sdp: answer.sdp,
-              type: answer.type,
-            })
-            console.log('[PhoneCamera] Answer sent')
+            
+            socket.emit('answer', { sdp: answer })
+            console.log('[PhoneCamera] Answer sent successfully!')
+            
           } catch (err) {
             console.error('[PhoneCamera] Answer error:', err)
+          } finally {
+            // 3. Xong việc thì MỞ KHÓA
+            isProcessingOfferRef.current = false 
           }
         })
 
@@ -190,6 +257,7 @@ export function PhoneCameraConnector({
     })
   }, [createPeerConnection])
 
+  
   const disconnect = useCallback(() => {
     autoConnectRef.current = false
     if (socketRef.current) {
@@ -224,7 +292,7 @@ export function PhoneCameraConnector({
     connectSignaling().catch(() => {})
 
     return () => {
-      disconnect()
+      // disconnect()
     }
   }, [])
 
@@ -305,16 +373,19 @@ export function PhoneCameraConnector({
             'rounded-xl border p-4',
             theme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200'
           )}>
+            <div className={cn(
+            'w-full aspect-video rounded-lg overflow-hidden mb-4 flex items-center justify-center bg-slate-900',
+            status === 'connected' ? 'block' : 'hidden'
+          )}>
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className={cn(
-                'w-full aspect-video rounded-lg object-cover mb-4',
-                status === 'connected' ? 'block' : 'hidden'
-              )}
+              style={{transform: 'rotate(90deg) scale(1.8)'}}
+              className="w-full h-full object-cover"
             />
+          </div>
 
             <div className={cn(
               'flex items-center gap-2 p-3 rounded-lg text-sm font-medium',

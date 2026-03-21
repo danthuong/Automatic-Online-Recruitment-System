@@ -9,6 +9,9 @@ app.commandLine.appendSwitch('enable-features', 'HardwareMediaStreamEncoding,Vaa
 app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
 app.commandLine.appendSwitch('ignore-certificate-errors')
+app.commandLine.appendSwitch('allow-insecure-localhost', 'true')
+app.commandLine.appendSwitch('ignore-certificate-errors-spki-list') // Reset danh sách
+app.commandLine.appendSwitch('unsafely-treat-insecure-origin-as-secure', 'https://localhost:8765,https://127.0.0.1:8765,https://192.168.31.188:8765')
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
@@ -188,7 +191,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: true,
+      webSecurity: false,
       devtools: true,
     },
     show: false,
@@ -765,6 +768,12 @@ ipcMain.handle(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION, async () => {
   disableContentProtection()
   return { success: true }
 })
+
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // Cho phép bỏ qua lỗi SSL cho môi trường local/dev
+  event.preventDefault();
+  callback(true);
+});
 
 app.whenReady().then(() => {
   const { session } = require('electron')

@@ -321,6 +321,7 @@
         if (socket && socket.connected) {
           log('SOCKET: Emitting offer', 'webrtc');
           socket.emit('offer', { sdp: offer });
+          // socket.emit('offer');
         } else {
           log('SOCKET: Cannot emit offer - not connected', 'error');
           showError('Socket disconnected before offer', 'WebRTC', 'N/A',
@@ -338,6 +339,7 @@
 
     function handleExamReady() {
       log('APP: Exam ready received, creating peer connection', 'info');
+      offerCreated = false;
       createPeerConnection();
     }
 
@@ -360,8 +362,10 @@
 
     function handleAnswer(data) {
       log('SOCKET: Received answer', 'webrtc');
-      if (peerConnection && peerConnection.remoteDescription) {
+      if (peerConnection) {
+      // if (peerConnection && peerConnection.remoteDescription) {
         peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp))
+            // peerConnection.setRemoteDescription(new RTCSessionDescription(data))
           .then(() => log('SOCKET: Remote description set', 'webrtc'))
           .catch(err => {
             log('ANSWER ERROR: ' + err.message, 'error');
@@ -385,7 +389,7 @@
       try {
         const constraints = {
           video: {
-            facingMode: 'environment',
+            facingMode: 'user',
             width: { ideal: 1280 },
             height: { ideal: 720 }
           },
@@ -479,7 +483,7 @@
       });
 
       socket.on('exam_ready', handleExamReady);
-      socket.on('offer', handleOffer);
+      // socket.on('offer', handleOffer);
       socket.on('answer', handleAnswer);
       socket.on('ice_candidate', handleIceCandidate);
 

@@ -12,6 +12,8 @@ export class AIProctorService {
   private stream1: MediaStream | null = null
   private canvas0: HTMLCanvasElement | null = null
   private canvas1: HTMLCanvasElement | null = null
+  private video0: HTMLVideoElement | null = null
+  private video1: HTMLVideoElement | null = null
   private frameTimer: number | null = null
   private isProcessing = false
   private isRunning = false
@@ -37,6 +39,21 @@ export class AIProctorService {
     this.canvas0.height = 240
     this.canvas1.width = 320
     this.canvas1.height = 240
+
+    this.video0 = document.createElement('video')
+    this.video0.autoplay = true
+    this.video0.playsInline = true
+    this.video0.muted = true
+    this.video0.srcObject = stream0
+    this.video0.play().catch(() => {})
+    this.video0.onloadedmetadata = () => { this.video0?.play().catch(() => {}) }
+
+    this.video1 = document.createElement('video')
+    this.video1.autoplay = true
+    this.video1.playsInline = true
+    this.video1.muted = true
+    this.video1.srcObject = stream1
+    this.video1.onloadedmetadata = () => { this.video1?.play().catch(() => {}) }
 
     const healthy = await this.healthCheck()
     if (!healthy) {
@@ -96,8 +113,8 @@ export class AIProctorService {
   }
 
   private async captureAndSend(): Promise<void> {
-    if (!this.canvas0 || !this.canvas1 || !this.stream0 || !this.stream1) return
-
+    if (!this.canvas0 || !this.canvas1 || !this.stream0 || !this.stream1 || !this.video0 || !this.video1) return
+    if (this.video0.readyState < 2 || this.video1.readyState < 2) return;
     this.isProcessing = true
 
     try {
@@ -105,8 +122,26 @@ export class AIProctorService {
       const ctx1 = this.canvas1.getContext('2d')
       if (!ctx0 || !ctx1) return
 
-      ctx0.drawImage(this.stream0 as unknown as CanvasImageSource, 0, 0, this.canvas0.width, this.canvas0.height)
-      ctx1.drawImage(this.stream1 as unknown as CanvasImageSource, 0, 0, this.canvas1.width, this.canvas1.height)
+      const isLandscape = this.video1.videoWidth > this.video1.videoHeight;
+
+      // ctx0.drawImage(this.stream0 as unknown as CanvasImageSource, 0, 0, this.canvas0.width, this.canvas0.height)
+      // ctx1.drawImage(this.stream1 as unknown as CanvasImageSource, 0, 0, this.canvas1.width, this.canvas1.height)
+
+      ctx0.drawImage(this.video0, 0, 0, this.canvas0.width, this.canvas0.height)
+      // ctx1.drawImage(this.video1, 0, 0, this.canvas1.width, this.canvas1.height)
+      ctx1.save()
+      if (isLandscape) {
+        // Đang nằm ngang -> Phải xoay 90 độ mới gửi
+        ctx1.translate(this.canvas1.width / 2, this.canvas1.height / 2)
+        ctx1.rotate(-90 * Math.PI / 180)
+        ctx1.scale(1.4, 1.4)
+        ctx1.drawImage(this.video1, -this.canvas1.width / 2, -this.canvas1.height / 2, this.canvas1.width, this.canvas1.height)
+      } else {
+        // Đang cầm dọc -> Cứ vẽ thẳng tắp lên canvas
+        ctx1.drawImage(this.video1, 0, 0, this.canvas1.width, this.canvas1.height)
+      }
+      ctx1.restore()
+
 
       const frame0 = this.canvas0.toDataURL('image/jpeg', FRAME_QUALITY)
       const frame1 = this.canvas1.toDataURL('image/jpeg', FRAME_QUALITY)
@@ -115,7 +150,7 @@ export class AIProctorService {
       const b64_1 = frame1.split(',')[1] || ''
 
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 3000)
+      const timeout = setTimeout(() => controller.abort(), 10000)
 
       try {
         const baseUrl = await getAIServerUrl()
@@ -172,6 +207,7 @@ export class AIProctorService {
     const state: AIProctorState = {
       isConnected: true,
       calibrationStatus,
+      calibrationProgress: data.camera_0.calibration_progress,
       faceCount: data.camera_0.face_count,
       gaze: data.camera_0.gaze ? { x: data.camera_0.gaze.gaze_x, y: data.camera_0.gaze.gaze_y } : null,
       headAngle: data.camera_0.head_angle,
@@ -200,6 +236,8 @@ export class AIProctorService {
     this.stream1 = null
     this.canvas0 = null
     this.canvas1 = null
+    this.video0 = null
+    this.video1 = null
     this.lastResponse = null
     this.isProcessing = false
     console.log('[AIProctorService] Stopped')

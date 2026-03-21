@@ -82,6 +82,9 @@ export function PreCheckScreen() {
       description: 'Stable internet for real-time monitoring',
       icon: Wifi, 
       status: 'pending',
+      autoCheck: async () => {
+        return navigator.onLine; // Kiểm tra xem máy tính có mạng không
+      }
     },
     { 
       id: 'display', 
@@ -201,7 +204,9 @@ export function PreCheckScreen() {
           setAIProctorState(state)
           
           if (state.calibrationStatus === 'calibrating') {
-            setCalibrationProgress(state.faceCount > 0 ? Math.min(100, (state.faceCount / CALIBRATION_REQUIRED_FRAMES) * 100) : 0)
+            const progress = state.calibrationProgress || 0;
+            // setCalibrationProgress(state.faceCount > 0 ? Math.min(100, (state.faceCount / CALIBRATION_REQUIRED_FRAMES) * 100) : 0)
+            setCalibrationProgress(Math.min(100, (progress / CALIBRATION_REQUIRED_FRAMES) * 100))
           } else if (state.calibrationStatus === 'calibrated') {
             setCalibrationProgress(100)
           }
@@ -494,9 +499,10 @@ export function PreCheckScreen() {
                       onClick={startCalibration}
                       disabled={!cameraReady || !aiServerReady}
                       className="flex-1"
+                      variant={aiState?.calibrationStatus === 'calibrated' ? "secondary" : "default"}
                     >
-                      <Fingerprint className="w-4 h-4 mr-2" />
-                      Start Calibration
+                      <Fingerprint className={cn("w-4 h-4 mr-2", aiState?.calibrationStatus === 'calibrated' && "text-green-500")} />
+                      {aiState?.calibrationStatus === 'calibrated' ? 'Calibrated (Click to Redo)' : 'Start Calibration'}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
