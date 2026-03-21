@@ -1,6 +1,6 @@
 export interface AIQuestion {
   id: string
-  type: 'greeting' | 'question' | 'hint' | 'feedback' | 'encouragement' | 'warning'
+  type: 'greeting' | 'question' | 'hint' | 'feedback' | 'encouragement' | 'warning' | 'general'
   content: string
   timestamp: number
   suggestedTime?: number
