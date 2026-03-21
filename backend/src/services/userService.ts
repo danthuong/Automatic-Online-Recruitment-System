@@ -89,7 +89,6 @@ export class UserService {
       linkedInUrl: candidate.linkedInUrl ?? undefined,
       portfolioUrl: candidate.portfolioUrl ?? undefined,
       wowScore: candidate.wowScore,
-      applicationStatus: candidate.applicationStatus,
       createdAt: candidate.createdAt,
     };
   }

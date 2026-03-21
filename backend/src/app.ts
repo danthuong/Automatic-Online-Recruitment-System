@@ -5,6 +5,11 @@ import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
+import companyRoutes from './routes/companyRoutes';
+import jobRoutes from './routes/jobRoutes';
+import applicationRoutes from './routes/applicationRoutes';
+import questionRoutes from './routes/questionRoutes';
+import testRoutes from './routes/testRoutes';
 
 const app = express();
 
@@ -55,6 +60,11 @@ app.get('/api/v1/health', (req, res) => {
 
 app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/companies', companyRoutes);
+app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/v1/applications', applicationRoutes);
+app.use('/api/v1/questions', questionRoutes);
+app.use('/api/v1/tests', testRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

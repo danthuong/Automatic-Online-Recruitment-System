@@ -40,13 +40,18 @@ const userSchema = new Schema<UserDocument>(
       type: String,
       select: false,
     },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
+      required: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// userSchema.index({ email: 1 });
-// userSchema.index({ role: 1 });
+
+userSchema.index({ companyId: 1 });
 
 export const User = mongoose.model<UserDocument>('User', userSchema);

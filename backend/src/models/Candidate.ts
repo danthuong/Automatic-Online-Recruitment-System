@@ -1,5 +1,4 @@
 import mongoose, { Schema as MongooseSchema } from 'mongoose';
-import { CandidateStatus } from '../types';
 
 const candidateSchema = new MongooseSchema(
   {
@@ -16,6 +15,21 @@ const candidateSchema = new MongooseSchema(
     resumeUrl: {
       type: String,
       trim: true,
+    },
+    githubUrl: {
+      type: String,
+      trim: true,
+    },
+    faceImageUrl: {
+      type: String,
+      trim: true,
+    },
+    cvUrl: {
+      type: String,
+      trim: true,
+    },
+    parsedCvData: {
+      type: MongooseSchema.Types.Mixed,
     },
     skills: {
       type: [String],
@@ -44,19 +58,12 @@ const candidateSchema = new MongooseSchema(
       min: 0,
       max: 100,
     },
-    applicationStatus: {
-      type: String,
-      enum: Object.values(CandidateStatus),
-      default: CandidateStatus.PENDING,
-    },
   },
   {
     timestamps: true,
   }
 );
 
-// candidateSchema.index({ userId: 1 });
-// candidateSchema.index({ applicationStatus: 1 });
-// candidateSchema.index({ wowScore: -1 });
+
 
 export const Candidate = mongoose.model('Candidate', candidateSchema);
