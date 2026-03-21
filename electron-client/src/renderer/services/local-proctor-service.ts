@@ -15,12 +15,14 @@ export class LocalProctorService {
   private onAlert: AIAlertCallback | null = null;
   private lastFaceAlert: AIAlert | null = null;
   private lastGestureAlert: AIAlert | null = null;
-  private connectCount = 0;
   private hiddenFaceVideo: HTMLVideoElement | null = null;
   private hiddenHandVideo: HTMLVideoElement | null = null;
   private hiddenFaceCanvas: HTMLCanvasElement | null = null;
   private hiddenHandCanvas: HTMLCanvasElement | null = null;
-  private isSettingUp = false;
+  private streamFace: MediaStream | null = null;
+  private streamHand: MediaStream | null = null;
+  private connectCount = 0;
+  private pendingConnect: { streamFace: MediaStream; streamHand: MediaStream } | null = null;
 
   async initializeModels(): Promise<void> {
     console.log("[LocalProctorService] initializeModels() START");
@@ -116,12 +118,7 @@ export class LocalProctorService {
     streamHand: MediaStream
   ): Promise<void> {
     const callId = ++this.connectCount;
-    console.log(`[LocalProctorService] connect() #${callId} START - faceStream=${streamFace?.active} handStream=${streamHand?.active}`);
-    
-    if (this.isSettingUp) {
-      console.warn(`[LocalProctorService] connect() #${callId} Already setting up, skipping`);
-      return;
-    }
+    console.log(`[LocalProctorService] connect() #${callId} START - face=${streamFace?.active} hand=${streamHand?.active}`);
     
     if (!this.engine) {
       console.error("[LocalProctorService] Engine not initialized");
@@ -129,101 +126,36 @@ export class LocalProctorService {
     }
     
     if (!streamFace?.active || !streamHand?.active) {
-      console.warn(`[LocalProctorService] connect() #${callId} Streams not active - face=${streamFace?.active} hand=${streamHand?.active}`);
+      console.warn(`[LocalProctorService] connect() #${callId} Streams not active`);
       return;
     }
 
-    this.isSettingUp = true;
     this._stopEngineNoDestroy();
+    this._createHiddenElements();
 
-    try {
-      this._createHiddenElements();
-      
-      if (!this.hiddenFaceVideo || !this.hiddenHandVideo || !this.hiddenFaceCanvas || !this.hiddenHandCanvas) {
-        console.error("[LocalProctorService] Hidden elements not created properly");
-        this.isSettingUp = false;
-        return;
-      }
-
-      console.log(`[LocalProctorService] connect() #${callId} Assigning streams to hidden videos`);
-      this.hiddenFaceVideo.srcObject = streamFace;
-      this.hiddenHandVideo.srcObject = streamHand;
-
-      const played = await Promise.all([
-        this._waitForVideoReady(this.hiddenFaceVideo, callId, 'face'),
-        this._waitForVideoReady(this.hiddenHandVideo, callId, 'hand'),
-      ]);
-
-      if (!played[0] || !played[1]) {
-        console.error(`[LocalProctorService] connect() #${callId} Videos failed to ready - face readyState=${this.hiddenFaceVideo.readyState} hand readyState=${this.hiddenHandVideo.readyState}`);
-      }
-
-      console.log(`[LocalProctorService] connect() #${callId} Videos ready - face readyState=${this.hiddenFaceVideo.readyState} hand readyState=${this.hiddenHandVideo.readyState}`);
-      
-      this.engine.start(
-        this.hiddenFaceVideo,
-        this.hiddenFaceCanvas,
-        this.hiddenHandVideo,
-        this.hiddenHandCanvas
-      );
-      
-      this.isRunning = true;
-      this._startPolling();
-      
-      console.log(`[LocalProctorService] connect() #${callId} COMPLETE`);
-    } catch (err) {
-      console.error(`[LocalProctorService] connect() #${callId} FAILED:`, err);
-      this._stopEngineNoDestroy();
-      throw err;
-    } finally {
-      this.isSettingUp = false;
-    }
-  }
-
-  private async _waitForVideoReady(video: HTMLVideoElement, callId: number, label: string): Promise<boolean> {
-    if (video.readyState >= 2 && !video.paused) {
-      console.log(`[LocalProctorService] connect() #${callId} ${label} already ready (readyState=${video.readyState})`);
-      return true;
+    if (!this.hiddenFaceVideo || !this.hiddenHandVideo || !this.hiddenFaceCanvas || !this.hiddenHandCanvas) {
+      console.error("[LocalProctorService] Hidden elements not created properly");
+      return;
     }
 
-    return new Promise((resolve) => {
-      let timeout: ReturnType<typeof setTimeout>;
-      let resolved = false;
+    this.streamFace = streamFace;
+    this.streamHand = streamHand;
+    this.hiddenFaceVideo.srcObject = streamFace;
+    this.hiddenHandVideo.srcObject = streamHand;
 
-      const doResolve = (result: boolean) => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeout(timeout);
-        video.removeEventListener('loadeddata', onData);
-        video.removeEventListener('playing', onPlaying);
-        video.removeEventListener('error', onError);
-        resolve(result);
-      };
-
-      const onData = () => {
-        console.log(`[LocalProctorService] connect() #${callId} ${label} loadeddata - readyState=${video.readyState}`);
-        if (video.readyState >= 2) {
-          doResolve(true);
-        }
-      };
-      const onPlaying = () => {
-        console.log(`[LocalProctorService] connect() #${callId} ${label} playing - readyState=${video.readyState} videoWidth=${video.videoWidth}`);
-        doResolve(true);
-      };
-      const onError = () => {
-        console.error(`[LocalProctorService] connect() #${callId} ${label} error`);
-        doResolve(false);
-      };
-
-      video.addEventListener('loadeddata', onData);
-      video.addEventListener('playing', onPlaying);
-      video.addEventListener('error', onError);
-
-      timeout = setTimeout(() => {
-        console.warn(`[LocalProctorService] connect() #${callId} ${label} wait timeout - readyState=${video.readyState} paused=${video.paused} videoWidth=${video.videoWidth}`);
-        doResolve(video.readyState >= 2);
-      }, 3000);
-    });
+    console.log(`[LocalProctorService] connect() #${callId} Hidden videos assigned - face readyState=${this.hiddenFaceVideo.readyState} hand readyState=${this.hiddenHandVideo.readyState}`);
+    
+    this.engine.start(
+      this.hiddenFaceVideo,
+      this.hiddenFaceCanvas,
+      this.hiddenHandVideo,
+      this.hiddenHandCanvas
+    );
+    
+    this.isRunning = true;
+    this._startPolling();
+    
+    console.log(`[LocalProctorService] connect() #${callId} COMPLETE`);
   }
 
   private _stopEngineNoDestroy(): void {
