@@ -43,11 +43,15 @@ MOCK_JOBS = {
 }
 
 
+from ..core.config import settings
+
+TIN_ENDPOINT = settings.tin_endpoint  # Default from config: http://10.18.151.50:5000/api/v1
+
+
 class NodeAPIClient:
     """HTTP client for Node.js REST API."""
-
-    def __init__(self, base_url: str = "http://localhost:5001/api/v1", mock_mode: bool = False):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None, mock_mode: bool = False):
+        self.base_url = base_url or TIN_ENDPOINT
         self.mock_mode = mock_mode or os.getenv("MOCK_API", "false").lower() == "true"
         self._client: Optional[httpx.Client] = None
 

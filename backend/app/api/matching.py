@@ -48,14 +48,16 @@ async def compute_cv_jd_match(
     Compare candidate's CV with job description to compute match score.
 
     This endpoint:
-    1. Fetches candidate's parsed CV data from Node.js API
-    2. Fetches job description and requirements
-    3. Uses LLM to analyze the match and generate feedback
-    4. Returns comprehensive match scores and analysis
+    1. Fetches candidate's profile from Node.js API to get cvUrl
+    2. Downloads the CV PDF from the cvUrl
+    3. Extracts text from PDF
+    4. Fetches job description
+    5. Uses LLM to analyze the match and generate feedback
+    6. Returns comprehensive match scores and analysis
 
     Request body:
-        - candidateId: MongoDB ObjectId of the candidate
-        - jobId: MongoDB ObjectId of the job
+        - candidateId: ID of the candidate (for job assignment, optional)
+        - jobId: ID of the job
 
     Returns:
         - overallScore: Weighted average of all match scores (0-100)
@@ -67,24 +69,92 @@ async def compute_cv_jd_match(
         - matchedPreferredSkills: Preferred skills candidate possesses
         - llmFeedback: LLM-generated summary of the match
     """
+    import httpx
+    from ..core.config import settings
+
     # Extract token from Authorization header
     token = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
 
     try:
-        service = get_matching_service()
+        # Step 1: Fetch candidate profile from Node.js API
+        tin_url = settings.tin_endpoint
 
-        result = service.compute_cv_jd_similarity(
-            candidate_id=request.candidateId,
-            job_id=request.jobId,
-            token=token
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Get candidate profile
+            headers = {}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+
+            profile_resp = await client.get(
+                f"{tin_url}/users/me/candidate-profile",
+                headers=headers
+            )
+
+            if profile_resp.status_code == 401:
+                raise HTTPException(status_code=401, detail="Unauthorized. Please login first.")
+
+            if profile_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Candidate profile not found"
+                )
+
+            profile_data = profile_resp.json()
+            candidate_profile = profile_data.get("data", {})
+
+            # Get cvUrl from profile
+            cv_url = candidate_profile.get("cvUrl")
+            if not cv_url:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No CV found. Please upload your CV first."
+                )
+
+            # Step 2: Download CV PDF
+            # cvUrl is like "files/some_thing_abcd", need to prepend tin_url
+            if cv_url.startswith("http"):
+                cv_download_url = cv_url
+            else:
+                cv_download_url = f"{tin_url}/{cv_url}"
+
+            cv_resp = await client.get(cv_download_url, headers=headers)
+            if cv_resp.status_code != 200:
+                raise HTTPException(status_code=400, detail="Failed to download CV file")
+
+            cv_content = cv_resp.content
+
+            # Get job description if jobId provided
+            job_description = None
+            if request.jobId:
+                job_resp = await client.get(
+                    f"{tin_url}/jobs/{request.jobId}",
+                    headers=headers
+                )
+                if job_resp.status_code == 200:
+                    job_data = job_resp.json()
+                    job_info = job_data.get("data", {})
+                    job_description = job_info.get("description", "")
+
+            if not job_description:
+                job_description = "Software Engineer position"
+
+        # Step 3: Compute similarity using matching service
+        service = get_matching_service()
+        result = service.compute_cv_jd_from_pdfs(cv_content, job_description.encode())
+
+        # Add candidate info to result
+        result["candidateId"] = request.candidateId
+        result["jobId"] = request.jobId
+        result["candidateName"] = candidate_profile.get("user", {}).get("firstName", "Unknown")
 
         logger.info(f"CV-JD matching completed for candidate {request.candidateId}, job {request.jobId}: score={result['overallScore']}")
 
         return result
 
+    except HTTPException:
+        raise
     except ValueError as e:
         error_msg = str(e)
         if "CV not parsed" in error_msg:
@@ -112,7 +182,7 @@ async def compute_cv_jd_match(
         logger.error(f"CV-JD matching error: {e}", exc_info=True)
         raise HTTPException(
             status_code=503,
-            detail="Service unavailable. Please try again later."
+            detail=f"Service unavailable: {str(e)}"
         )
 
 
