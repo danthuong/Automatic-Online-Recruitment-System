@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { TimelineEvent } from '../components/proctoring/Timeline'
+import type { AIProctorState, AIAlert } from '../services/ai-proctor-types'
 
 export type Language = 'python' | 'javascript' | 'java' | 'cpp' | 'go' | 'rust'
 
@@ -56,6 +57,14 @@ interface ExamState {
   showWarningDialog: boolean
   lastStrikeReason: string | null
   
+  aiProctorState: AIProctorState | null
+  aiStream0: MediaStream | null
+  aiStream1: MediaStream | null
+  
+  setAIProctorState: (state: AIProctorState | null) => void
+  setAIStreams: (stream0: MediaStream | null, stream1: MediaStream | null) => void
+  handleAIAlert: (alert: AIAlert) => void
+  
   setLogin: (testId: string, candidateId: string) => void
   setCandidateName: (name: string) => void
   setQuestions: (questions: Question[], totalTime: number) => void
@@ -102,6 +111,38 @@ export const useExamStore = create<ExamState>((set, get) => ({
   lastViolationTime: 0,
   showWarningDialog: false,
   lastStrikeReason: null,
+  aiProctorState: null,
+  aiStream0: null,
+  aiStream1: null,
+
+  setAIProctorState: (state) => set({ aiProctorState: state }),
+  
+  setAIStreams: (stream0, stream1) => set({ aiStream0: stream0, aiStream1: stream1 }),
+  
+  handleAIAlert: (alert) => {
+    const { addWarning, addStrike, addTimelineEvent, status } = get()
+    
+    if (status !== 'exam' && status !== 'precheck') return
+    
+    console.log('[AI Alert]', alert)
+    
+    addTimelineEvent({
+      timestamp: new Date(alert.timestamp * 1000),
+      type: 'warning',
+      title: `AI: ${alert.type}`,
+      details: alert.message,
+      severity: alert.type === 'CRITICAL' ? 'critical' : 'warning',
+    })
+    
+    if (alert.type === 'CRITICAL') {
+      addStrike(`AI: ${alert.message}`)
+    } else {
+      addWarning({
+        type: alert.type === 'SUSPICIOUS' ? 'major' : 'minor',
+        message: `AI: ${alert.message}`,
+      })
+    }
+  },
 
   setLogin: (testId, candidateId) => set({ testId, candidateId, status: 'precheck' }),
   
@@ -323,5 +364,8 @@ export const useExamStore = create<ExamState>((set, get) => ({
     lastViolationTime: 0,
     showWarningDialog: false,
     lastStrikeReason: null,
+    aiProctorState: null,
+    aiStream0: null,
+    aiStream1: null,
   }),
 }))

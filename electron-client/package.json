@@ -5,7 +5,9 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "dev:python": "cd ../ai && python server.py",
+    "dev:full": "concurrently --kill-others-on-fail --names \"ELECTRON,PYTHON\" --prefix-colors \"cyan,magenta\" \"npm run dev\" \"npm run dev:python\"",
+    "build": "tsc && vite build && electron-packager . RecruitExam --platform=win32 --arch=x64 --out=release --overwrite",
     "build:vite": "tsc && vite build",
     "postinstall": "electron-rebuild",
     "preview": "vite preview",
@@ -24,10 +26,12 @@
     "@tkomde/iohook": "^1.1.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "concurrently": "^8.2.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^4.5.1"
@@ -43,6 +47,7 @@
     "autoprefixer": "^10.4.17",
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
@@ -72,33 +77,19 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
-      "build/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "build/Release",
-        "to": "build/Release",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "dist-electron/**/*"
     ],
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "icon": "public/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "requireAdminRights": true
+      "icon": "public/icon.ico",
+      "sign": false
     }
   }
 }
