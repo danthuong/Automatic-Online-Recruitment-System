@@ -65,6 +65,7 @@ export class JobService {
     location?: string;
     remote?: boolean;
     hiringCount?: number;
+    status?: JobStatus;
     expiresAt?: Date;
     testConfig?: {
       totalTime: number;
@@ -81,7 +82,7 @@ export class JobService {
 
     const job = await Job.create({
       ...data,
-      status: JobStatus.DRAFT,
+      status: data.status ?? JobStatus.DRAFT,
       applicationCount: 0,
     });
 

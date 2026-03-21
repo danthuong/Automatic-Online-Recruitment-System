@@ -153,8 +153,7 @@ export function CompanyDetailPage() {
               <h2 className="text-xl font-bold">Open Positions</h2>
             </div>
 
-            {/* {jobs.length === 0 ? ( */}
-            {!jobs ? (
+            {jobs.length === 0 ? (
               <div className="text-center py-16">
                 <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium">No open positions</h3>

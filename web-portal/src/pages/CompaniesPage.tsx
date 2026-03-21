@@ -3,6 +3,7 @@ import { Search, Building2 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { CompanyCard } from '@/components/CompanyCard'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { companyService } from '@/services/companyService'
 import type { CompanyResponse, CompanyFilters } from '@/types/job'
@@ -115,23 +116,25 @@ export function CompaniesPage() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-10">
-                <button
-                  className="px-3 py-1.5 text-sm rounded-md border border-input disabled:opacity-50 hover:bg-accent transition-colors"
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
                   Previous
-                </button>
+                </Button>
                 <span className="text-sm text-muted-foreground px-2">
                   Page {page} of {totalPages}
                 </span>
-                <button
-                  className="px-3 py-1.5 text-sm rounded-md border border-input disabled:opacity-50 hover:bg-accent transition-colors"
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             )}
           </>

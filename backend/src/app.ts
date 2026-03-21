@@ -44,8 +44,8 @@ const generalLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '30000', 10),
-  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10', 10),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '3000', 10),
+  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '30', 10),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many authentication attempts, please try again later' },

@@ -41,8 +41,14 @@ export function JobDetailPage() {
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    jobService.getById(id)
-      .then(setJob)
+    Promise.all([
+      jobService.getById(id),
+      applicationService.hasApplied(id).catch(() => false),
+    ])
+      .then(([jobData, alreadyApplied]) => {
+        setJob(jobData)
+        setApplied(alreadyApplied)
+      })
       .catch(() => {
         toast.error('Job not found')
         navigate('/jobs')

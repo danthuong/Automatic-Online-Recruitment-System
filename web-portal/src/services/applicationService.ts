@@ -5,6 +5,7 @@ export interface ApplicationFilters {
   page?: number
   limit?: number
   status?: string
+  jobId?: string
 }
 
 export const applicationService = {
@@ -18,11 +19,17 @@ export const applicationService = {
     if (filters.page) params.set('page', String(filters.page))
     if (filters.limit) params.set('limit', String(filters.limit))
     if (filters.status) params.set('status', filters.status)
+    if (filters.jobId) params.set('jobId', filters.jobId)
 
     const response = await api.get<PaginatedResponse<ApplicationResponse>>(
       `/applications/my-applications?${params.toString()}`
     )
     return response.data
+  },
+
+  async hasApplied(jobId: string): Promise<boolean> {
+    const result = await this.getMyApplications({ jobId, limit: 1 })
+    return result.data.length > 0
   },
 
   async getById(id: string): Promise<ApplicationResponse> {

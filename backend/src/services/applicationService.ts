@@ -128,7 +128,7 @@ export class ApplicationService {
 
   static async getByCandidate(
     candidateId: string,
-    params: { page?: number; limit?: number; status?: ApplicationStatus }
+    params: { page?: number; limit?: number; status?: ApplicationStatus; jobId?: string }
   ): Promise<{ applications: ApplicationResponse[]; total: number }> {
     const page = Math.max(1, params.page || 1);
     const limit = Math.min(100, Math.max(1, params.limit || 20));
@@ -136,6 +136,7 @@ export class ApplicationService {
 
     const filter: Record<string, unknown> = { candidateId };
     if (params.status) filter.status = params.status;
+    if (params.jobId) filter.jobId = params.jobId;
 
     const [applications, total] = await Promise.all([
       Application.find(filter).skip(skip).limit(limit).sort({ appliedAt: -1 }),

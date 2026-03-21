@@ -26,6 +26,7 @@ export const createJobSchema = z.object({
     location: z.string().optional(),
     remote: z.boolean().optional(),
     hiringCount: z.number().int().min(1).optional(),
+    status: z.string().optional(),
     expiresAt: z.string().datetime().optional().transform((v) => (v ? new Date(v) : undefined)),
     testConfig: z.object({
       totalTime: z.number().int().min(1).default(60),

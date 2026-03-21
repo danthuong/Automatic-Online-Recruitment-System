@@ -52,6 +52,7 @@ export const getAllByCandidateSchema = z.object({
     page: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     limit: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 20)),
     status: z.string().optional(),
+    jobId: z.string().optional(),
   }),
 });
 
@@ -93,11 +94,12 @@ export const getByJob = asyncHandler(
 export const getByCandidate = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const candidateId = req.user!.userId;
-    const { page, limit, status } = req.query as Record<string, unknown>;
+    const { page, limit, status, jobId } = req.query as Record<string, unknown>;
     const result = await ApplicationService.getByCandidate(candidateId, {
       page: page as number,
       limit: limit as number,
       status: status as ApplicationStatus,
+      jobId: jobId as string,
     });
     ApiResponse.paginated(
       res,

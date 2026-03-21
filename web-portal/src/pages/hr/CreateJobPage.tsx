@@ -11,7 +11,7 @@ import { TagInput } from '@/components/ui/tag-input'
 import { Spinner } from '@/components/ui/spinner'
 import { jobService } from '@/services/hrService'
 import type { CreateJobPayload } from '@/types/hr'
-import { ExperienceLevel, JobType } from '@/types/index'
+import { ExperienceLevel, JobType, JobStatus } from '@/types/index'
 
 const experienceOptions = [
   { value: '', label: 'Any Level' },
@@ -131,7 +131,7 @@ export function CreateJobPage() {
     try {
       const payload = {
         ...form,
-        status: publish ? 'active' : 'draft',
+        status: publish ? JobStatus.ACTIVE : JobStatus.DRAFT,
         experienceLevel: form.experienceLevel || undefined,
         jobType: form.jobType || undefined,
         location: form.location || undefined,

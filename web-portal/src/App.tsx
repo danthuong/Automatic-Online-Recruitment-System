@@ -15,6 +15,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
 import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage'
 import { MyTestsPage } from '@/pages/MyTestsPage'
+import { CandidateProfilePage } from '@/pages/CandidateProfilePage'
 import { HrDashboard } from '@/pages/hr/HrDashboard'
 import { HrJobsPage } from '@/pages/hr/HrJobsPage'
 import { CreateJobPage } from '@/pages/hr/CreateJobPage'
@@ -75,6 +76,11 @@ function AppRoutes() {
       <Route path="/my-tests" element={
         <ProtectedRoute>
           <MyTestsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <CandidateProfilePage />
         </ProtectedRoute>
       } />
 

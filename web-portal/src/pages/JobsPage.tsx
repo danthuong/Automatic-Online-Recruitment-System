@@ -167,8 +167,7 @@ export function JobsPage() {
           <div className="flex justify-center py-20">
             <Spinner size="lg" />
           </div>
-        // ) : jobs.length === 0 ? (
-        ) : !jobs ? (
+        ) : jobs.length === 0 ? (
           <div className="text-center py-20">
             <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium">No jobs found</h3>

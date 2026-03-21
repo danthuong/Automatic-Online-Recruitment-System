@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Briefcase,
   Building2,
@@ -48,6 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
 
 export function HomePage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [applications, setApplications] = useState<ApplicationResponse[]>([])
   const [featuredJobs, setFeaturedJobs] = useState<JobResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,7 +91,7 @@ export function HomePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      window.location.href = `/jobs?search=${encodeURIComponent(searchQuery.trim())}`
+      navigate(`/jobs?search=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
@@ -232,7 +233,7 @@ export function HomePage() {
               <Spinner />
             </div>
           // ) : applications.length === 0 ? (
-          ) : !applications ? (
+          ) : applications.length === 0 ? (
             <Card className="p-12 text-center">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-primary" />

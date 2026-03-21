@@ -42,6 +42,7 @@ export interface CreateJobPayload {
   location?: string
   remote?: boolean
   hiringCount?: number
+  status?: string
   expiresAt?: string
   testConfig?: {
     totalTime: number
