@@ -12,6 +12,9 @@ import { JobDetailPage } from '@/pages/JobDetailPage'
 import { CompaniesPage } from '@/pages/CompaniesPage'
 import { CompanyDetailPage } from '@/pages/CompanyDetailPage'
 import { LandingPage } from '@/pages/LandingPage'
+import { ApplicationsPage } from '@/pages/ApplicationsPage'
+import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage'
+import { MyTestsPage } from '@/pages/MyTestsPage'
 import { HrDashboard } from '@/pages/hr/HrDashboard'
 import { HrJobsPage } from '@/pages/hr/HrJobsPage'
 import { CreateJobPage } from '@/pages/hr/CreateJobPage'
@@ -57,6 +60,21 @@ function AppRoutes() {
       <Route path="/" element={
         <ProtectedRoute>
           <HomePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/applications" element={
+        <ProtectedRoute>
+          <ApplicationsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/applications/:id" element={
+        <ProtectedRoute>
+          <ApplicationDetailPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/my-tests" element={
+        <ProtectedRoute>
+          <MyTestsPage />
         </ProtectedRoute>
       } />
 

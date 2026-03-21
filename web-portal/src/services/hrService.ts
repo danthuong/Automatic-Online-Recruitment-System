@@ -1,19 +1,10 @@
 import api from '@/lib/api'
+import type { JobResponse, PaginatedResponse } from '@/types/job'
 import type {
-  JobResponse,
-  PaginatedResponse,
-  ApplicationResponse,
-} from '@/types/job'
-import type {
-  ApplicationFilters,
-  CreateJobPayload,
-  UpdateJobPayload,
-  DashboardSummary,
-  PipelineStage,
-  JobMetrics,
   JobFilters,
+  DashboardSummary,
+  JobMetrics,
 } from '@/types/hr'
-import { ApplicationStatus } from '@/types/index'
 
 export const jobService = {
   async getAll(filters: JobFilters = {}): Promise<PaginatedResponse<JobResponse>> {
@@ -59,12 +50,12 @@ export const jobService = {
     return response.data
   },
 
-  async create(data: CreateJobPayload): Promise<JobResponse> {
+  async create(data: Record<string, unknown>): Promise<JobResponse> {
     const response = await api.post<{ data: JobResponse }>('/jobs', data)
     return response.data.data
   },
 
-  async update(id: string, data: UpdateJobPayload): Promise<JobResponse> {
+  async update(id: string, data: Record<string, unknown>): Promise<JobResponse> {
     const response = await api.patch<{ data: JobResponse }>(`/jobs/${id}`, data)
     return response.data.data
   },
@@ -75,81 +66,10 @@ export const jobService = {
   },
 }
 
-export const applicationService = {
-  async apply(jobId: string): Promise<ApplicationResponse> {
-    const response = await api.post<{ data: ApplicationResponse }>('/applications', { jobId })
-    return response.data.data
-  },
-
-  async getMyApplications(filters: ApplicationFilters = {}): Promise<PaginatedResponse<ApplicationResponse>> {
-    const params = new URLSearchParams()
-    if (filters.page) params.set('page', String(filters.page))
-    if (filters.limit) params.set('limit', String(filters.limit))
-    if (filters.status) params.set('status', filters.status)
-
-    const response = await api.get<PaginatedResponse<ApplicationResponse>>(
-      `/applications/my-applications?${params.toString()}`
-    )
-    return response.data
-  },
-
-  async getById(id: string): Promise<ApplicationResponse> {
-    const response = await api.get<{ data: ApplicationResponse }>(`/applications/${id}`)
-    return response.data.data
-  },
-
-  async getByJob(
-    jobId: string,
-    filters: ApplicationFilters = {}
-  ): Promise<PaginatedResponse<ApplicationResponse>> {
-    const params = new URLSearchParams()
-    if (filters.page) params.set('page', String(filters.page))
-    if (filters.limit) params.set('limit', String(filters.limit))
-    if (filters.status) params.set('status', filters.status)
-
-    const response = await api.get<PaginatedResponse<ApplicationResponse>>(
-      `/applications/job/${jobId}?${params.toString()}`
-    )
-    return response.data
-  },
-
-  async updateStatus(
-    id: string,
-    data: {
-      status: string
-      cvScore?: number
-      screeningFeedback?: string
-      hrNotes?: string
-    }
-  ): Promise<ApplicationResponse> {
-    const response = await api.patch<{ data: ApplicationResponse }>(
-      `/applications/${id}/status`,
-      data
-    )
-    return response.data.data
-  },
-
-  async screen(
-    id: string,
-    data: {
-      decision: 'pass' | 'fail'
-      cvScore?: number
-      screeningFeedback?: string
-      hrNotes?: string
-    }
-  ): Promise<ApplicationResponse> {
-    const response = await api.post<{ data: ApplicationResponse }>(
-      `/applications/${id}/screen`,
-      data
-    )
-    return response.data.data
-  },
-}
-
 export const hrService = {
   async getDashboardSummary(): Promise<DashboardSummary> {
     const [pendingApps, activeJobsResult] = await Promise.all([
-      applicationService.getMyApplications({ limit: 1 }),
+      api.get<{ pagination: { total: number } }>('/applications/my-applications?limit=1').then((r) => r.data),
       jobService.getMyJobs({ status: 'active', limit: 1 }),
     ])
 
@@ -159,27 +79,6 @@ export const hrService = {
       scheduledTests: 0,
       completedTests: 0,
     }
-  },
-
-  async getPipelineByJob(jobId: string): Promise<PipelineStage[]> {
-    const stages: { status: ApplicationStatus; label: string }[] = [
-      { status: ApplicationStatus.PENDING, label: 'Applied' },
-      { status: ApplicationStatus.SCREENING, label: 'Screening' },
-      { status: ApplicationStatus.SCREENING_PASSED, label: 'Passed' },
-      { status: ApplicationStatus.SCHEDULED, label: 'Scheduled' },
-      { status: ApplicationStatus.TEST_COMPLETED, label: 'Test Done' },
-      { status: ApplicationStatus.OFFERED, label: 'Offered' },
-      { status: ApplicationStatus.REJECTED, label: 'Rejected' },
-    ]
-
-    const counts: PipelineStage[] = await Promise.all(
-      stages.map(async (stage) => {
-        const result = await applicationService.getByJob(jobId, { status: stage.status, limit: 1 })
-        return { ...stage, count: result.pagination.total }
-      })
-    )
-
-    return counts
   },
 
   async getJobMetrics(): Promise<JobMetrics[]> {

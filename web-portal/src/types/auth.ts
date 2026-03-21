@@ -45,6 +45,7 @@ export interface UserResponse {
   isActive: boolean
   companyId?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface AuthTokens {

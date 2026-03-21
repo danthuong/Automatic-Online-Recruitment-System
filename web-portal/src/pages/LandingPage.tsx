@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Search, FileText, Shield, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
 import { useState } from 'react'
 
 export function LandingPage() {
@@ -246,13 +247,4 @@ export function LandingPage() {
   )
 }
 
-function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={`rounded-lg border bg-card text-card-foreground card-professional ${className || ''}`}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}
+

@@ -14,6 +14,7 @@ export function Navbar() {
 
   const candidateLinks = [
     { to: '/', label: 'Home' },
+    { to: '/applications', label: 'My Applications' },
     { to: '/jobs', label: 'Jobs' },
     { to: '/companies', label: 'Companies' },
   ]

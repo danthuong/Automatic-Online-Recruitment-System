@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, User, Mail, Github, FileText, Star,
-  CheckCircle2, XCircle, TrendingUp, ExternalLink,
+  CheckCircle2, XCircle, TrendingUp, ExternalLink, Calendar, Clock, Play,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Navbar } from '@/components/Navbar'
@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { applicationService } from '@/services/hrService'
+import { applicationService } from '@/services/applicationService'
+import { testService } from '@/services/testService'
 import type { ApplicationResponse } from '@/types/job'
-import { ApplicationStatus } from '@/types/index'
+import type { TestResponse } from '@/types/index'
+import { ApplicationStatus, TestStatus } from '@/types/index'
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'success' | 'warning' | 'outline' }> = {
   [ApplicationStatus.PENDING]: { label: 'Applied', variant: 'secondary' },
@@ -31,6 +33,7 @@ export function ApplicationReviewPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [application, setApplication] = useState<ApplicationResponse | null>(null)
+  const [test, setTest] = useState<TestResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [screeningFeedback, setScreeningFeedback] = useState('')
   const [cvScore, setCvScore] = useState('')
@@ -40,8 +43,14 @@ export function ApplicationReviewPage() {
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    applicationService.getById(id)
-      .then(setApplication)
+    Promise.all([
+      applicationService.getById(id),
+      testService.getByApplication(id).catch(() => null),
+    ])
+      .then(([app, t]) => {
+        setApplication(app)
+        setTest(t)
+      })
       .catch(() => {
         toast.error('Failed to load application')
         navigate('/hr/jobs')
@@ -144,6 +153,70 @@ export function ApplicationReviewPage() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {test && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Play className="w-5 h-5" />
+                    Technical Test
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-4 text-sm">
+                    <Badge variant={
+                      test.status === TestStatus.GRADED ? 'success' :
+                      test.status === TestStatus.IN_PROGRESS ? 'warning' :
+                      test.status === TestStatus.READY ? 'success' :
+                      'secondary'
+                    }>
+                      {test.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </Badge>
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      {test.totalTime} min
+                    </span>
+                    {test.scheduledAt && (
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(test.scheduledAt).toLocaleString()}
+                      </span>
+                    )}
+                    {test.startedAt && (
+                      <span className="text-muted-foreground">
+                        Started: {new Date(test.startedAt).toLocaleString()}
+                      </span>
+                    )}
+                    {test.submittedAt && (
+                      <span className="text-muted-foreground">
+                        Submitted: {new Date(test.submittedAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  {test.focusLossCount !== undefined && test.focusLossCount > 0 && (
+                    <p className="text-xs text-warning">
+                      Focus loss detected: {test.focusLossCount} time{test.focusLossCount > 1 ? 's' : ''}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {!test && (application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCHEDULED) && (
+              <Card className="border-dashed border-2">
+                <CardContent className="pt-6 text-center space-y-3">
+                  <Calendar className="w-10 h-10 text-muted-foreground mx-auto" />
+                  <div>
+                    <p className="font-medium">Schedule Test</p>
+                    <p className="text-sm text-muted-foreground">Test scheduling coming soon</p>
+                  </div>
+                  <Button variant="outline" disabled size="sm">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Coming Soon
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {screeningDetails && (
               <Card>
                 <CardHeader>

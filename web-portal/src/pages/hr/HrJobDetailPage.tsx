@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { jobService, applicationService } from '@/services/hrService'
+import { jobService } from '@/services/hrService'
+import { applicationService } from '@/services/applicationService'
 import type { JobResponse } from '@/types/job'
 import type { ApplicationResponse } from '@/types/job'
 import { JobStatus, ApplicationStatus } from '@/types/index'
@@ -49,8 +50,12 @@ export function HrJobDetailPage() {
   const navigate = useNavigate()
   const [job, setJob] = useState<JobResponse | null>(null)
   const [applications, setApplications] = useState<ApplicationResponse[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(1)
+
+  const PAGE_SIZE = 10
 
   const fetchData = useCallback(async () => {
     if (!id) return
@@ -58,17 +63,22 @@ export function HrJobDetailPage() {
     try {
       const [jobData, appsData] = await Promise.all([
         jobService.getById(id),
-        applicationService.getByJob(id, { status: statusFilter || undefined, limit: 50 }),
+        applicationService.getByJob(id, { status: statusFilter || undefined, page, limit: PAGE_SIZE }),
       ])
       setJob(jobData)
       setApplications(appsData.data)
+      setTotal(appsData.pagination.total)
     } catch {
       toast.error('Failed to load job')
       navigate('/hr/jobs')
     } finally {
       setLoading(false)
     }
-  }, [id, navigate, statusFilter])
+  }, [id, navigate, statusFilter, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter])
 
   useEffect(() => {
     fetchData()
@@ -78,6 +88,7 @@ export function HrJobDetailPage() {
     applications.filter((a) => a.status === status).length
 
   const totalApps = applications.length
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   if (loading || !job) {
     return (
@@ -159,7 +170,7 @@ export function HrJobDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Applications ({totalApps})</CardTitle>
+                <CardTitle className="text-lg">Applications ({total})</CardTitle>
               </CardHeader>
               <CardContent>
                 {applications.length === 0 ? (
@@ -168,36 +179,61 @@ export function HrJobDetailPage() {
                     <p className="text-muted-foreground text-sm">No applications yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {applications.map((app) => {
-                      const cfg = APP_STATUS_CONFIG[app.status] || { label: app.status, variant: 'secondary' as const }
-                      const candidate = app.candidate
-                      return (
-                        <Link key={app.id} to={`/hr/applications/${app.id}`} className="block group">
-                          <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/30 transition-all">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold flex-shrink-0">
-                              {candidate?.user?.firstName?.[0]}{candidate?.user?.lastName?.[0]}
+                  <>
+                    <div className="space-y-3">
+                      {applications.map((app) => {
+                        const cfg = APP_STATUS_CONFIG[app.status] || { label: app.status, variant: 'secondary' as const }
+                        const candidate = app.candidate
+                        return (
+                          <Link key={app.id} to={`/hr/applications/${app.id}`} className="block group">
+                            <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/30 transition-all">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold flex-shrink-0">
+                                {candidate?.user?.firstName?.[0]}{candidate?.user?.lastName?.[0]}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                                  {candidate?.user?.firstName} {candidate?.user?.lastName}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {candidate?.email}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                {app.cvScore !== undefined && (
+                                  <span className="text-sm font-medium">Score: {app.cvScore}</span>
+                                )}
+                                <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>
+                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm group-hover:text-primary transition-colors truncate">
-                                {candidate?.user?.firstName} {candidate?.user?.lastName}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {candidate?.email}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              {app.cvScore !== undefined && (
-                                <span className="text-sm font-medium">Score: {app.cvScore}</span>
-                              )}
-                              <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>
-                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </Link>
-                      )
-                    })}
-                  </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={page === 1}
+                          onClick={() => setPage((p) => p - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground px-3">
+                          Page {page} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={page >= totalPages}
+                          onClick={() => setPage((p) => p + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
