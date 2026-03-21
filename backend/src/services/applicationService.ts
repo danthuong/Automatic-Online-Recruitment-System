@@ -213,26 +213,20 @@ export class ApplicationService {
     id: string,
     requestingUserRole: UserRole,
     result: {
-      cvScore: number;
-      screeningFeedback: string;
-      screeningDetails: {
-        skillMatchScore: number;
-        experienceMatchScore: number;
-        overallScore: number;
-        skillGaps: string[];
-        strengths: string[];
-        llmFeedback: string;
-      };
+      decision: 'pass' | 'fail';
+      cvScore?: number;
+      screeningFeedback?: string;
+      hrNotes?: string;
     }
   ): Promise<ApplicationResponse> {
-    const status = result.cvScore >= 60
+    const status = result.decision === 'pass'
       ? ApplicationStatus.SCREENING_PASSED
       : ApplicationStatus.SCREENING_FAILED;
 
     return this.updateStatus(id, status, requestingUserRole, {
       cvScore: result.cvScore,
       screeningFeedback: result.screeningFeedback,
-      screeningDetails: result.screeningDetails,
+      hrNotes: result.hrNotes,
     });
   }
 }

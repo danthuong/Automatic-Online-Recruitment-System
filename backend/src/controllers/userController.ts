@@ -82,6 +82,18 @@ export const getMyCandidateProfile = asyncHandler(
   }
 );
 
+export const getCandidateProfile = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const candidate = await UserService.getCandidateByUserId(id);
+    if (!candidate) {
+      ApiResponse.error(res, 'Candidate profile not found', 404);
+      return;
+    }
+    ApiResponse.success(res, candidate);
+  }
+);
+
 export const update = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;

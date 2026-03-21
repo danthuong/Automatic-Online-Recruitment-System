@@ -11,6 +11,7 @@ import {
   update,
   remove,
   getMyCandidateProfile,
+  getCandidateProfile,
 } from '../controllers/userController';
 
 const router = Router();
@@ -21,6 +22,7 @@ router.get('/', authorize(UserRole.ADMIN, UserRole.HR), validate(getAllSchema), 
 router.get('/me', getById);
 router.get('/me/candidate-profile', getMyCandidateProfile);
 router.get('/:id', authorize(UserRole.ADMIN, UserRole.HR), getById);
+router.get('/:id/candidate-profile', authorize(UserRole.ADMIN, UserRole.HR), getCandidateProfile);
 router.patch('/:id', validate(updateSchema), update);
 router.delete('/:id', authorize(UserRole.ADMIN), validate(deleteSchema), remove);
 

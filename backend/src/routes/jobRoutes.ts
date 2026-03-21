@@ -8,6 +8,7 @@ const router = Router();
 
 router.post('/', authenticate, authorize(UserRole.HR, UserRole.ADMIN), validate(jobController.createJobSchema), jobController.create);
 router.get('/', validate(jobController.getAllSchema), jobController.getAll);
+router.get('/my-jobs', authenticate, authorize(UserRole.HR, UserRole.ADMIN), jobController.getMyJobs);
 router.get('/company/:companyId', validate(jobController.getAllSchema), jobController.getByCompany);
 router.get('/:id', jobController.getById);
 router.patch('/:id', authenticate, validate(jobController.updateJobSchema), jobController.update);

@@ -49,6 +49,9 @@ export class AuthService {
     role: UserRole;
     firstName: string;
     lastName: string;
+    githubUrl?: string;
+    cvFileId?: string;
+    faceImageFileId?: string;
   }): Promise<{ user: UserResponse; tokens: AuthTokens }> {
     const existingUser = await User.findOne({ email: params.email.toLowerCase() });
     if (existingUser) {
@@ -72,6 +75,9 @@ export class AuthService {
         skills: [],
         experience: 0,
         applicationStatus: CandidateStatus.PENDING,
+        githubUrl: params.githubUrl ? `https://github.com/${params.githubUrl}` : undefined,
+        cvUrl: params.cvFileId ? `/files/${params.cvFileId}` : undefined,
+        faceImageUrl: params.faceImageFileId ? `/files/${params.faceImageFileId}` : undefined,
       });
     }
 

@@ -4,10 +4,12 @@ import { JobService } from '../services/jobService';
 import { JobStatus } from '../types';
 import { ApiResponse } from '../utils/ApiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
+import { BadRequestError } from '../utils/errors';
+import { User } from '../models/User';
 
 export const createJobSchema = z.object({
   body: z.object({
-    companyId: z.string().min(1, 'Company ID is required'),
+    companyId: z.string().min(1, 'Company ID is required').optional(),
     title: z.string().min(1, 'Job title is required').max(200),
     description: z.string().min(1, 'Job description is required'),
     summary: z.string().optional(),
@@ -83,9 +85,21 @@ export const getAllSchema = z.object({
 
 export const create = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    const { companyId, ...rest } = req.body;
+
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      const hrUser = await User.findById(req.user!.userId).select('companyId');
+      if (!hrUser?.companyId) {
+        throw new BadRequestError('No company associated with your account. Please provide companyId.');
+      }
+      finalCompanyId = hrUser.companyId;
+    }
+
     const job = await JobService.create({
       hrId: req.user!.userId,
-      ...req.body,
+      companyId: finalCompanyId,
+      ...rest,
     });
     ApiResponse.created(res, job, 'Job created successfully');
   }
@@ -147,6 +161,26 @@ export const getByCompany = asyncHandler(
         status: status as JobStatus,
       }
     );
+    ApiResponse.paginated(
+      res,
+      result.jobs,
+      (page as number) || 1,
+      (limit as number) || 20,
+      result.total
+    );
+  }
+);
+
+export const getMyJobs = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { page, limit, status, search } = req.query as Record<string, unknown>;
+    const result = await JobService.getAll({
+      hrId: req.user!.userId,
+      page: page as number,
+      limit: limit as number,
+      status: status as JobStatus,
+      search: search as string,
+    });
     ApiResponse.paginated(
       res,
       result.jobs,

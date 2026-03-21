@@ -32,16 +32,10 @@ export const updateStatusSchema = z.object({
 export const screenSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({
-    cvScore: z.number().min(0).max(100),
-    screeningFeedback: z.string(),
-    screeningDetails: z.object({
-      skillMatchScore: z.number(),
-      experienceMatchScore: z.number(),
-      overallScore: z.number(),
-      skillGaps: z.array(z.string()),
-      strengths: z.array(z.string()),
-      llmFeedback: z.string(),
-    }),
+    decision: z.enum(['pass', 'fail']),
+    cvScore: z.number().min(0).max(100).optional(),
+    screeningFeedback: z.string().optional(),
+    hrNotes: z.string().optional(),
   }),
 });
 

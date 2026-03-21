@@ -10,6 +10,8 @@ import jobRoutes from './routes/jobRoutes';
 import applicationRoutes from './routes/applicationRoutes';
 import questionRoutes from './routes/questionRoutes';
 import testRoutes from './routes/testRoutes';
+import uploadRoutes from './routes/uploadRoutes';
+import fileRoutes from './routes/fileRoutes';
 
 const app = express();
 
@@ -34,7 +36,7 @@ app.use(
 app.use(helmet());
 
 const generalLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '30000', 10),
   max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
   standardHeaders: true,
   legacyHeaders: false,
@@ -42,7 +44,7 @@ const generalLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '30000', 10),
   max: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10', 10),
   standardHeaders: true,
   legacyHeaders: false,
@@ -59,6 +61,8 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/files', fileRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/companies', companyRoutes);
 app.use('/api/v1/jobs', jobRoutes);

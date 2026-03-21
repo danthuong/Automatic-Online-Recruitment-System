@@ -5,3 +5,5 @@ export { default as jobRoutes } from './jobRoutes';
 export { default as applicationRoutes } from './applicationRoutes';
 export { default as questionRoutes } from './questionRoutes';
 export { default as testRoutes } from './testRoutes';
+export { default as uploadRoutes } from './uploadRoutes';
+export { default as fileRoutes } from './fileRoutes';
