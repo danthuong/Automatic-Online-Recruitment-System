@@ -46,7 +46,7 @@ export function MultipleChoice({
                 <span className={cn(
                   'flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold transition-all',
                   isSelected
-                    ? 'bg-gradient-to-br from-primary to-pink-500 text-white shadow-lg shadow-primary/30'
+                    ? 'bg-primary text-white'
                     : 'bg-slate-700 text-slate-300'
                 )}>
                   {letter}

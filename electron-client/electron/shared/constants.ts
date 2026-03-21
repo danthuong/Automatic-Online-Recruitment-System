@@ -21,12 +21,17 @@ export const IPC_CHANNELS = {
     KILL: 'process:kill',
     GET_RUNNING: 'process:getRunning',
     SCAN_PROCESSES: 'process:scanProcesses',
+    ON_WARNING: 'process:warning',
   },
   WINDOW: {
     ON_BLUR: 'window:onBlur',
     ON_FOCUS: 'window:onFocus',
     ON_DEVTOOLS_OPEN: 'window:onDevToolsOpen',
     ON_RESIZE: 'window:onResize',
+  },
+  CONTENT: {
+    ENABLE_PROTECTION: 'content:enableProtection',
+    DISABLE_PROTECTION: 'content:disableProtection',
   },
 } as const
 
@@ -35,10 +40,7 @@ export const BLACKLISTED_PROCESSES = [
   'AnyDesk.exe',
   'OBS.exe',
   'obs64.exe',
-  'Discord.exe',
-  'Chrome.exe',
   'firefox.exe',
-  'msedge.exe',
   'Opera.exe',
   'Brave.exe',
   'VLC.exe',
@@ -60,7 +62,6 @@ export const BLACKLISTED_PROCESSES = [
 ]
 
 export const SUSPICIOUS_KEYS = [
-  'Tab',
   'Escape',
   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
   'PrintScreen',

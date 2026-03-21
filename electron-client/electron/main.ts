@@ -1,6 +1,6 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu, dialog } from 'electron'
 import path from 'path'
-import { exec } from 'child_process'
+import { exec, execSync } from 'child_process'
 import { IPC_CHANNELS, BLACKLISTED_PROCESSES, EXAM_CONFIG } from './shared/constants'
 
 process.env.NODE_ENV = 'development'
@@ -21,6 +21,157 @@ let blurCheckInterval: NodeJS.Timeout | null = null
 let focusLossCount = 0
 let totalTimeOutside = 0
 let lastBlurTime: number | null = null
+let processViolationCount = 0
+const PROCESS_VIOLATION_THRESHOLD = 3
+
+type IOHookInstance = {
+  on(event: string, callback: (event: any) => void): void
+  start(enableLogger?: boolean): void
+  stop(): void
+  disableClickPropagation(): void
+}
+
+let iohook: IOHookInstance | null = null
+let isIOHookBlocking = false
+
+function checkAdminPrivileges(): boolean {
+  try {
+    execSync('net session', { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function requestAdminElevation(): Promise<boolean> {
+  if (checkAdminPrivileges()) {
+    return true
+  }
+
+  const result = await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Administrator Privileges Required',
+    message: 'The exam requires administrator privileges for secure proctoring.',
+    detail: 'The application will now restart with elevated privileges.\n\nClick OK to continue or Cancel to exit.',
+    buttons: ['OK', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    icon: undefined
+  })
+
+  if (result.response === 0) {
+    try {
+      const exePath = process.execPath
+      exec(`runas /user:Administrator "${exePath}"`)
+      app.quit()
+      return false
+    } catch (error) {
+      console.error('[Admin] Failed to restart with admin privileges:', error)
+      return false
+    }
+  }
+
+  return false
+}
+
+function getShortcutString(keycode: number, altKey: boolean, ctrlKey: boolean, shiftKey: boolean): string | null {
+  if (altKey) {
+    switch (keycode) {
+      case 15: return 'Alt+Tab'
+      case 1: return 'Alt+Escape'
+      case 62: return 'Alt+F4'
+    }
+  }
+  
+  if (ctrlKey && shiftKey) {
+    switch (keycode) {
+      case 23: return 'Ctrl+Shift+I'
+      case 47: return 'Ctrl+Shift+C'
+      case 36: return 'Ctrl+Shift+J'
+      case 25: return 'Ctrl+Shift+P'
+    }
+  }
+  
+  return null
+}
+
+function initIOHook(): boolean {
+  if (iohook) return true
+  
+  try {
+    const iohookModule = require('@tkomde/iohook')
+    iohook = iohookModule as IOHookInstance
+    console.log('[IOHook] Module loaded successfully')
+    return true
+  } catch (error) {
+    console.warn('[IOHook] Failed to load module:', error)
+    iohook = null
+    return false
+  }
+}
+
+function startIOHookBlocking(): boolean {
+  if (!iohook) {
+    console.warn('[IOHook] Module not loaded - cannot start blocking')
+    return false
+  }
+  
+  if (isIOHookBlocking) {
+    console.log('[IOHook] Already blocking')
+    return true
+  }
+  
+  if (!mainWindow) {
+    console.warn('[IOHook] No main window - cannot start blocking')
+    return false
+  }
+  
+  try {
+    iohook.on('keydown', (event: any) => {
+      if (!isIOHookBlocking || !mainWindow) return
+      
+      const { keycode, altKey, ctrlKey, shiftKey } = event
+      const shortcut = getShortcutString(keycode, altKey, ctrlKey, shiftKey)
+      
+      if (shortcut) {
+        console.log(`[IOHook] Blocking: ${shortcut}`)
+        mainWindow?.webContents.send('shortcut:blocked', shortcut)
+      }
+    })
+    
+    iohook.on('mouseclick', (event: any) => {
+      if (!isIOHookBlocking || !mainWindow) return
+      
+      if (event.button === 2) {
+        console.log('[IOHook] Blocking: RightClick')
+        mainWindow?.webContents.send('shortcut:blocked', 'RightClick')
+      }
+    })
+    
+    iohook.disableClickPropagation()
+    iohook.start()
+    isIOHookBlocking = true
+    console.log('[IOHook] Blocking started')
+    return true
+  } catch (error) {
+    console.error('[IOHook] Error starting blocking:', error)
+    return false
+  }
+}
+
+function stopIOHookBlocking(): void {
+  if (!iohook || !isIOHookBlocking) {
+    return
+  }
+  
+  try {
+    iohook.stop()
+    isIOHookBlocking = false
+    console.log('[IOHook] Blocking stopped')
+  } catch (error) {
+    console.error('[IOHook] Error stopping blocking:', error)
+  }
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -53,7 +204,8 @@ function createWindow() {
       focusLossCount++
       lastBlurTime = Date.now()
       mainWindow.webContents.send(IPC_CHANNELS.WINDOW.ON_BLUR)
-      console.log(`[Window] Blur detected - Focus loss #${focusLossCount}`)
+      mainWindow.webContents.send('shortcut:blocked', 'Alt+Tab')
+      console.log(`[Window] Blur detected - Focus loss #${focusLossCount} (Alt+Tab warning sent)`)
     }
   })
 
@@ -90,7 +242,6 @@ function createWindow() {
 
   if (VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -108,17 +259,31 @@ function setupKioskMode(enabled: boolean) {
 
   if (enabled) {
     mainWindow.setKiosk(true)
-    mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    mainWindow.setAlwaysOnTop(true, 'pop-up-menu')
     isExamActive = true
     startAllMonitoring()
     disableSystemKeys(true)
+    processViolationCount = 0
     
     if (Menu.getApplicationMenu()) {
       Menu.setApplicationMenu(null)
     }
     
+    if (initIOHook()) {
+      const hookStarted = startIOHookBlocking()
+      if (hookStarted) {
+        console.log('[Kiosk] IOHook keyboard blocking started successfully')
+      } else {
+        console.warn('[Kiosk] Failed to start IOHook blocking')
+      }
+    } else {
+      console.warn('[Kiosk] IOHook not available - Alt+Tab will not be blocked at OS level')
+    }
+    
     console.log('[Kiosk] Mode enabled - Exam started')
   } else {
+    stopIOHookBlocking()
+    
     mainWindow.setKiosk(false)
     mainWindow.setAlwaysOnTop(false)
     isExamActive = false
@@ -164,50 +329,58 @@ function disableSystemKeys(enabled: boolean) {
       :focus {
         outline: none !important;
       }
+      
+      img {
+        -webkit-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+      }
     `)
 
-    globalShortcut.register('Alt+Tab', () => {
+    const blockShortcut = (shortcut: string) => {
       if (isExamActive) {
-        console.log('[Shortcut Blocked] Alt+Tab')
-        mainWindow?.webContents.send('shortcut:blocked', 'Alt+Tab')
+        console.log(`[Shortcut Blocked] ${shortcut}`)
+        mainWindow?.webContents.send('shortcut:blocked', shortcut)
       }
-    })
+    }
 
-    globalShortcut.register('Alt+F4', () => {
-      if (isExamActive) {
-        console.log('[Shortcut Blocked] Alt+F4')
-        mainWindow?.webContents.send('shortcut:blocked', 'Alt+F4')
-      }
-    })
+    globalShortcut.register('Alt+Tab', () => blockShortcut('Alt+Tab'))
+    globalShortcut.register('Alt+F4', () => blockShortcut('Alt+F4'))
+    globalShortcut.register('Alt+Escape', () => blockShortcut('Alt+Escape'))
+    globalShortcut.register('Alt+F3', () => blockShortcut('Alt+F3'))
+    globalShortcut.register('Control+Tab', () => blockShortcut('Control+Tab'))
+    globalShortcut.register('Control+Shift+Tab', () => blockShortcut('Control+Shift+Tab'))
+    globalShortcut.register('Escape', () => blockShortcut('Escape'))
+    globalShortcut.register('F11', () => blockShortcut('F11'))
+    globalShortcut.register('F5', () => blockShortcut('F5'))
+    globalShortcut.register('PrintScreen', () => blockShortcut('PrintScreen'))
+    globalShortcut.register('Control+PrintScreen', () => blockShortcut('Control+PrintScreen'))
+    globalShortcut.register('Control+Shift+P', () => blockShortcut('Control+Shift+P'))
+    globalShortcut.register('Control+Shift+I', () => blockShortcut('Control+Shift+I'))
+    globalShortcut.register('Control+Shift+J', () => blockShortcut('Control+Shift+J'))
+    globalShortcut.register('Control+Shift+C', () => blockShortcut('Control+Shift+C'))
+    globalShortcut.register('Control+Shift+E', () => blockShortcut('Control+Shift+E'))
+    globalShortcut.register('Control+Shift+R', () => blockShortcut('Control+Shift+R'))
+    globalShortcut.register('Control+Shift+F', () => blockShortcut('Control+Shift+F'))
+    globalShortcut.register('Control+Shift+M', () => blockShortcut('Control+Shift+M'))
+    globalShortcut.register('Control+Shift+B', () => blockShortcut('Control+Shift+B'))
+    globalShortcut.register('Control+Shift+K', () => blockShortcut('Control+Shift+K'))
+    globalShortcut.register('Meta+Tab', () => blockShortcut('Meta+Tab'))
+    globalShortcut.register('Meta+Shift+Tab', () => blockShortcut('Meta+Shift+Tab'))
+    globalShortcut.register('Meta+Escape', () => blockShortcut('Meta+Escape'))
+    globalShortcut.register('Meta+L', () => blockShortcut('Meta+L'))
+    globalShortcut.register('Control+L', () => blockShortcut('Control+L'))
+    globalShortcut.register('Control+N', () => blockShortcut('Control+N'))
+    globalShortcut.register('Control+T', () => blockShortcut('Control+T'))
+    globalShortcut.register('Control+W', () => blockShortcut('Control+W'))
+    globalShortcut.register('Control+P', () => blockShortcut('Control+P'))
+    globalShortcut.register('Control+S', () => blockShortcut('Control+S'))
+    globalShortcut.register('Control+O', () => blockShortcut('Control+O'))
+    globalShortcut.register('Control+A', () => blockShortcut('Control+A'))
+    globalShortcut.register('Control+D', () => blockShortcut('Control+D'))
+    globalShortcut.register('Control+F', () => blockShortcut('Control+F'))
 
-    globalShortcut.register('Control+Tab', () => {
-      if (isExamActive) {
-        console.log('[Shortcut Blocked] Control+Tab')
-        mainWindow?.webContents.send('shortcut:blocked', 'Control+Tab')
-      }
-    })
-
-    globalShortcut.register('Escape', () => {
-      if (isExamActive) {
-        console.log('[Shortcut Blocked] Escape')
-        mainWindow?.webContents.send('shortcut:blocked', 'Escape')
-      }
-    })
-
-    globalShortcut.register('F11', () => {
-      if (isExamActive) {
-        console.log('[Shortcut Blocked] F11')
-      }
-    })
-
-    globalShortcut.register('PrintScreen', () => {
-      if (isExamActive) {
-        console.log('[Shortcut Blocked] PrintScreen')
-        mainWindow?.webContents.send('shortcut:blocked', 'PrintScreen')
-      }
-    })
-
-    console.log('[Security] System shortcuts blocked')
+    console.log('[Security] Enhanced system shortcuts blocked (35 shortcuts)')
   } else {
     mainWindow.webContents.insertCSS(`
       * { 
@@ -255,10 +428,24 @@ async function checkForbiddenProcesses() {
     console.log(`[Process Monitor] Forbidden processes detected: ${foundBlacklisted.join(', ')}`)
     mainWindow.webContents.send('process:forbidden', foundBlacklisted)
     
+    processViolationCount++
+    
     for (const proc of foundBlacklisted) {
       mainWindow.webContents.send(IPC_CHANNELS.PROCTOR.LOG_EVENT, {
         type: 'forbidden_process_detected',
-        data: { processName: proc, action: 'detected' }
+        data: { processName: proc, action: 'detected', violationCount: processViolationCount }
+      })
+    }
+    
+    if (processViolationCount >= PROCESS_VIOLATION_THRESHOLD) {
+      const reason = `Forbidden process detected (${processViolationCount} violations): ${foundBlacklisted.join(', ')}`
+      console.log(`[Process Monitor] Auto-disqualifying: ${reason}`)
+      disqualifyCandidate(reason)
+    } else {
+      mainWindow.webContents.send('process:warning', {
+        count: processViolationCount,
+        threshold: PROCESS_VIOLATION_THRESHOLD,
+        processes: foundBlacklisted
       })
     }
   }
@@ -326,6 +513,7 @@ function stopAllMonitoring() {
     blurCheckInterval = null
   }
   globalShortcut.unregisterAll()
+  disableContentProtection()
   console.log('[Monitoring] All stopped')
 }
 
@@ -333,6 +521,125 @@ function startAllMonitoring() {
   startProcessMonitoring()
   startDevToolsMonitoring()
   startFocusMonitoring()
+  enableContentProtection()
+}
+
+let contentProtectionCSS = ''
+
+function enableContentProtection() {
+  if (!mainWindow) return
+  
+  contentProtectionCSS = `
+    * {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      -webkit-user-drag: none !important;
+      user-drag: none !important;
+    }
+    body {
+      -webkit-app-region: no-drag !important;
+      overscroll-behavior: none !important;
+    }
+    img, canvas, video {
+      -webkit-user-drag: none !important;
+      user-drag: none !important;
+      pointer-events: none !important;
+      -webkit-touch-callout: none !important;
+    }
+    input, textarea, [contenteditable="true"], [role="textbox"] {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+    .exam-content {
+      -webkit-mask-image: none !important;
+      mask-image: none !important;
+    }
+    @keyframes antiScreenCapture {
+      0% { opacity: 1; }
+      100% { opacity: 1; }
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 999999;
+      pointer-events: none;
+    }
+  `
+  
+  mainWindow.webContents.insertCSS(contentProtectionCSS)
+  
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (!isExamActive) return
+    
+    const blockedKeys: string[] = []
+    
+    if (input.key === 'PrintScreen') {
+      event.preventDefault()
+      blockedKeys.push('PrintScreen')
+    }
+    
+    if (input.control && input.shift && (input.key === 'C' || input.key === 'I' || input.key === 'J' || input.key === 'P')) {
+      event.preventDefault()
+      blockedKeys.push(`Ctrl+Shift+${input.key}`)
+    }
+    
+    if (input.key === 'Escape') {
+      event.preventDefault()
+      blockedKeys.push('Escape')
+    }
+    
+    if (input.key === 'F11') {
+      event.preventDefault()
+      blockedKeys.push('F11')
+    }
+    
+    if (input.key === 'F12') {
+      event.preventDefault()
+      blockedKeys.push('F12')
+    }
+    
+    for (const key of blockedKeys) {
+      console.log(`[Content Protection] Key blocked: ${key}`)
+      mainWindow?.webContents.send('shortcut:blocked', key)
+    }
+  })
+  
+  mainWindow.webContents.on('context-menu', (event) => {
+    if (isExamActive) {
+      event.preventDefault()
+      console.log('[Content Protection] Context menu (right-click) blocked')
+      mainWindow?.webContents.send('shortcut:blocked', 'RightClick')
+    }
+  })
+  
+  console.log('[Content Protection] Enabled - OCR/text-scanning protection active')
+}
+
+function disableContentProtection() {
+  if (!mainWindow) return
+  
+  mainWindow.webContents.insertCSS(`
+    * {
+      user-select: auto !important;
+      -webkit-user-select: auto !important;
+      -moz-user-select: auto !important;
+      -ms-user-select: auto !important;
+      -webkit-user-drag: auto !important;
+      user-drag: auto !important;
+    }
+    body::before {
+      display: none !important;
+    }
+  `)
+  
+  console.log('[Content Protection] Disabled')
 }
 
 function getScreenInfo() {
@@ -446,7 +753,22 @@ ipcMain.handle(IPC_CHANNELS.PROCESS.SCAN_PROCESSES, async () => {
   return { scanned: true }
 })
 
+ipcMain.handle(IPC_CHANNELS.CONTENT.ENABLE_PROTECTION, async () => {
+  enableContentProtection()
+  return { success: true }
+})
+
+ipcMain.handle(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION, async () => {
+  disableContentProtection()
+  return { success: true }
+})
+
 app.whenReady().then(() => {
+  if (!checkAdminPrivileges()) {
+    console.warn('[App] Warning: Running without administrator privileges')
+    console.warn('[App] Some security features may not work correctly')
+  }
+  
   createWindow()
 
   app.on('activate', () => {

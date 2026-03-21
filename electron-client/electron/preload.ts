@@ -23,12 +23,17 @@ const IPC_CHANNELS = {
     KILL: 'process:kill',
     GET_RUNNING: 'process:getRunning',
     SCAN_PROCESSES: 'process:scanProcesses',
+    ON_WARNING: 'process:warning',
   },
   WINDOW: {
     ON_BLUR: 'window:onBlur',
     ON_FOCUS: 'window:onFocus',
     ON_DEVTOOLS_OPEN: 'window:onDevToolsOpen',
     ON_RESIZE: 'window:onResize',
+  },
+  CONTENT: {
+    ENABLE_PROTECTION: 'content:enableProtection',
+    DISABLE_PROTECTION: 'content:disableProtection',
   },
 }
 
@@ -60,6 +65,12 @@ export interface ProcessAPI {
   kill: (processName: string) => Promise<{ success: boolean; processName: string }>
   getRunning: () => Promise<{ processes: string[] }>
   onForbiddenProcess: (callback: (processName: string) => void) => () => void
+  onProcessWarning: (callback: (data: { count: number; threshold: number; processes: string[] }) => void) => () => void
+}
+
+export interface ContentAPI {
+  enableProtection: () => Promise<{ success: boolean }>
+  disableProtection: () => Promise<{ success: boolean }>
 }
 
 export interface WindowAPI {
@@ -125,18 +136,36 @@ const processAPI: ProcessAPI = {
     ipcRenderer.on('process:forbidden', (_, processName) => callback(processName))
     return () => ipcRenderer.removeAllListeners('process:forbidden')
   },
+  onProcessWarning: (callback) => {
+    ipcRenderer.on(IPC_CHANNELS.PROCESS.ON_WARNING, (_, data) => callback(data))
+    return () => ipcRenderer.removeAllListeners(IPC_CHANNELS.PROCESS.ON_WARNING)
+  },
+}
+
+const contentAPI: ContentAPI = {
+  enableProtection: () => ipcRenderer.invoke(IPC_CHANNELS.CONTENT.ENABLE_PROTECTION),
+  disableProtection: () => ipcRenderer.invoke(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
   exam: examAPI,
   proctor: proctorAPI,
   process: processAPI,
+  content: contentAPI,
 })
 
 contextBridge.exposeInMainWorld('electronEvents', {
   onShortcutBlocked: (callback: (shortcut: string) => void) => {
     ipcRenderer.on('shortcut:blocked', (_, shortcut) => callback(shortcut))
     return () => ipcRenderer.removeAllListeners('shortcut:blocked')
+  },
+  onFocusLost: (callback: () => void) => {
+    ipcRenderer.on(IPC_CHANNELS.WINDOW.ON_BLUR, () => callback())
+    return () => ipcRenderer.removeAllListeners(IPC_CHANNELS.WINDOW.ON_BLUR)
+  },
+  onFocusGained: (callback: () => void) => {
+    ipcRenderer.on(IPC_CHANNELS.WINDOW.ON_FOCUS, () => callback())
+    return () => ipcRenderer.removeAllListeners(IPC_CHANNELS.WINDOW.ON_FOCUS)
   },
 })
 
@@ -153,6 +182,7 @@ declare global {
       exam: ExamAPI
       proctor: ProctorAPI
       process: ProcessAPI
+      content: ContentAPI
     }
     electronEvents?: {
       onShortcutBlocked: (callback: (shortcut: string) => void) => () => void

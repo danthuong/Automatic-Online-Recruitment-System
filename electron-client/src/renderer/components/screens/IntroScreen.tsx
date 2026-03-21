@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
-import { useTheme } from '@/renderer/hooks/useTheme'
 
 interface IntroScreenProps {
   onComplete: () => void
@@ -10,29 +9,25 @@ interface IntroScreenProps {
 
 export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
   const [isComplete, setIsComplete] = useState(false)
-  const [showContent, setShowContent] = useState(false)
+  const [showText, setShowText] = useState(false)
   const [showLoading, setShowLoading] = useState(false)
-  const { theme } = useTheme()
 
   useEffect(() => {
-    // Start content fade in after logo animation starts
-    const contentTimer = setTimeout(() => {
-      setShowContent(true)
-    }, 1600)
+    const textTimer = setTimeout(() => {
+      setShowText(true)
+    }, 1200)
 
-    // Start loading indicator
     const loadingTimer = setTimeout(() => {
       setShowLoading(true)
-    }, 2400)
+    }, 1800)
 
-    // Complete and transition
     const completeTimer = setTimeout(() => {
       setIsComplete(true)
       setTimeout(onComplete, 400)
     }, duration)
 
     return () => {
-      clearTimeout(contentTimer)
+      clearTimeout(textTimer)
       clearTimeout(loadingTimer)
       clearTimeout(completeTimer)
     }
@@ -42,43 +37,33 @@ export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
     <AnimatePresence>
       {!isComplete && (
         <motion.div
-          className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${
-            theme === 'dark' 
-              ? 'bg-[#060a12]' 
-              : 'bg-[#f8fafc]'
-          }`}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-          {/* Logo Animation */}
+          {/* Logo - Stroke drawing animation */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
+            initial={{ opacity: 1 }}
             className="relative"
           >
-            <IntroLogo size={180} animated={true} />
+            <IntroLogo size={140} animated={true} />
           </motion.div>
 
-          {/* Text Content */}
+          {/* Text Content - Slow fade in */}
           <AnimatePresence>
-            {showContent && (
+            {showText && (
               <motion.div
                 className="text-center mt-8"
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               >
-                <h1 className={`text-2xl font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>
+                <h1 className="text-2xl font-semibold text-foreground">
                   HCMUT Recruitment System
                 </h1>
-                <p className={`mt-2 text-sm ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                }`}>
+                <p className="mt-2 text-sm text-muted-foreground">
                   Automated Online Assessment Platform
                 </p>
               </motion.div>
@@ -89,9 +74,7 @@ export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
           <AnimatePresence>
             {showLoading && (
               <motion.div
-                className={`absolute bottom-16 ${
-                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                }`}
+                className="absolute bottom-16 text-muted-foreground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -109,31 +92,18 @@ export function IntroScreen({ onComplete, duration = 3000 }: IntroScreenProps) {
             )}
           </AnimatePresence>
 
-          {/* Progress Bar */}
-          <motion.div
-            className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-800"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
+          {/* Clean Progress Bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-border">
             <motion.div
-              className="h-full bg-gradient-to-r from-[#032D91] to-[#1488DB]"
+              className="h-full bg-primary"
               initial={{ width: '0%' }}
               animate={{ width: '100%' }}
-              transition={{ duration: duration / 1000 - 0.5, ease: 'linear' }}
+              transition={{ 
+                duration: duration / 1000, 
+                ease: 'linear' 
+              }}
             />
-          </motion.div>
-
-          {/* Subtle Grid Background */}
-          <div 
-            className="absolute inset-0 pointer-events-none overflow-hidden"
-            style={{
-              backgroundImage: theme === 'dark' 
-                ? 'linear-gradient(rgba(3, 45, 145, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(3, 45, 145, 0.03) 1px, transparent 1px)'
-                : 'linear-gradient(rgba(3, 45, 145, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(3, 45, 145, 0.02) 1px, transparent 1px)',
-              backgroundSize: '40px 40px',
-            }}
-          />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

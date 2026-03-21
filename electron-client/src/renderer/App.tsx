@@ -268,14 +268,13 @@ impl Solution {
 
 const totalTime = 60 * 60
 
+// Professional page transitions - slow, smooth
 const pageVariants: Variants = {
   initial: {
     opacity: 0,
-    y: 20,
   },
   enter: {
     opacity: 1,
-    y: 0,
     transition: {
       duration: 0.4,
       ease: 'easeOut' as const,
@@ -283,7 +282,6 @@ const pageVariants: Variants = {
   },
   exit: {
     opacity: 0,
-    y: -20,
     transition: {
       duration: 0.3,
       ease: 'easeIn' as const,

@@ -75,9 +75,9 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
         <div className="flex items-center gap-3">
           <div className={cn(
             "w-9 h-9 rounded-full flex items-center justify-center",
-            theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
+            theme === 'dark' ? 'bg-primary/10' : 'bg-slate-100'
           )}>
-            <Bot className={cn("w-5 h-5", theme === 'dark' ? 'text-primary' : 'text-blue-600')} />
+            <Bot className={cn("w-5 h-5", theme === 'dark' ? 'text-primary' : 'text-slate-600')} />
           </div>
           <div>
             <div className={cn(
@@ -150,9 +150,9 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
                 >
                   <div className={cn(
                     "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-                    theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
+                    theme === 'dark' ? 'bg-primary/10' : 'bg-slate-100'
                   )}>
-                    <Bot className={cn("w-4 h-4", theme === 'dark' ? 'text-primary' : 'text-blue-600')} />
+                    <Bot className={cn("w-4 h-4", theme === 'dark' ? 'text-primary' : 'text-slate-600')} />
                   </div>
 
                   <div className={cn(
@@ -182,9 +182,9 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
                 >
                   <div className={cn(
                     "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-                    theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
+                    theme === 'dark' ? 'bg-primary/10' : 'bg-slate-100'
                   )}>
-                    <Bot className={cn("w-4 h-4", theme === 'dark' ? 'text-primary' : 'text-blue-600')} />
+                    <Bot className={cn("w-4 h-4", theme === 'dark' ? 'text-primary' : 'text-slate-600')} />
                   </div>
                   <div className={cn(
                     "px-4 py-3 rounded-xl rounded-tl-sm",
@@ -195,17 +195,17 @@ export function InterviewerChat({ questionId, className }: InterviewerChatProps)
                   )}>
                     <div className="flex gap-1">
                       <span className={cn(
-                        "w-2 h-2 rounded-full animate-bounce",
+                        "w-2 h-2 rounded-full animate-pulse",
                         theme === 'dark' ? 'bg-slate-500' : 'bg-slate-400'
-                      )} style={{ animationDelay: '0ms' }} />
+                      )} />
                       <span className={cn(
-                        "w-2 h-2 rounded-full animate-bounce",
+                        "w-2 h-2 rounded-full animate-pulse",
                         theme === 'dark' ? 'bg-slate-500' : 'bg-slate-400'
-                      )} style={{ animationDelay: '150ms' }} />
+                      )} style={{ animationDelay: '200ms' }} />
                       <span className={cn(
-                        "w-2 h-2 rounded-full animate-bounce",
+                        "w-2 h-2 rounded-full animate-pulse",
                         theme === 'dark' ? 'bg-slate-500' : 'bg-slate-400'
-                      )} style={{ animationDelay: '300ms' }} />
+                      )} style={{ animationDelay: '400ms' }} />
                     </div>
                   </div>
                 </motion.div>

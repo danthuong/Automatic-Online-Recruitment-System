@@ -4,6 +4,7 @@ import { Button } from '@/renderer/components/ui/button'
 import { MediaCapture } from '@/renderer/components/proctoring/MediaCapture'
 import { useExamStore } from '@/renderer/store/examStore'
 import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
+import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
 import { cn } from '@/renderer/lib/utils'
 import { 
   Shield, 
@@ -17,7 +18,6 @@ import {
   Loader2,
   Fingerprint,
 } from 'lucide-react'
-import { useTheme } from '@/renderer/hooks/useTheme'
 
 interface ChecklistItem {
   id: string
@@ -28,10 +28,32 @@ interface ChecklistItem {
   autoCheck?: () => Promise<boolean>
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: 'easeOut',
+    },
+  },
+}
+
 export function PreCheckScreen() {
   const { testId, startExam } = useExamStore()
   const mediaStreamRef = useRef<MediaStream | null>(null)
-  const { theme } = useTheme()
   
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     { 
@@ -113,14 +135,11 @@ export function PreCheckScreen() {
 
   const handleStreamReady = (stream: MediaStream) => {
     mediaStreamRef.current = stream
-    
     const hasVideo = stream.getVideoTracks().length > 0
     const hasAudio = stream.getAudioTracks().length > 0
-    
     setCameraReady(hasVideo)
     setMicReady(hasAudio)
     setMediaReady(hasVideo && hasAudio)
-    
     if (hasVideo) updateChecklist('camera', 'passed')
     if (hasAudio) updateChecklist('microphone', 'passed')
   }
@@ -153,7 +172,6 @@ export function PreCheckScreen() {
       alert('Please enable both camera and microphone to continue.')
       return
     }
-
     try {
       if (window.electronAPI) {
         await window.electronAPI.exam.setKiosk(true)
@@ -174,48 +192,31 @@ export function PreCheckScreen() {
     agreed,
     allPassed,
   ]
-  const currentStep = completedSteps.findIndex(s => !s)
 
   return (
-    <div className={cn(
-      "min-h-screen",
-      theme === 'dark' ? 'bg-background' : 'bg-slate-50'
-    )}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className={cn(
-        "px-6 py-4 border-b",
-        theme === 'dark' 
-          ? 'bg-card/50 border-border' 
-          : 'bg-white border-slate-200'
-      )}>
+      <header className="px-6 py-4 border-b border-border bg-card">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <IntroLogo size={40} />
               <div>
-                <h1 className={cn(
-                  "text-lg font-semibold",
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
-                )}>
+                <h1 className="text-lg font-semibold text-foreground">
                   Pre-Exam Check
                 </h1>
-                <p className={cn(
-                  "text-xs",
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                )}>
+                <p className="text-xs text-muted-foreground">
                   System Requirements
                 </p>
               </div>
             </div>
             
-            <div className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium border",
-              theme === 'dark' 
-                ? 'bg-secondary text-slate-300 border-border' 
-                : 'bg-slate-100 text-slate-600 border-slate-200'
-            )}>
-              <span className={theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}>Test:</span>
-              <span className="ml-2 font-mono">{testId || 'N/A'}</span>
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1.5 rounded text-xs font-medium border border-border bg-secondary text-secondary-foreground">
+                <span className="text-muted-foreground">Test:</span>
+                <span className="ml-2 font-mono">{testId || 'N/A'}</span>
+              </div>
+              <ThemeToggle />
             </div>
           </div>
 
@@ -229,11 +230,11 @@ export function PreCheckScreen() {
                     animate={{
                       backgroundColor: completedSteps[index] 
                         ? '#22c55e' 
-                        : currentStep === index 
+                        : index === completedSteps.findIndex(s => !s)
                           ? 'hsl(var(--primary))'
-                          : theme === 'dark' ? '#334155' : '#e2e8f0',
+                          : 'hsl(var(--muted))',
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium transition-colors"
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                   >
                     {completedSteps[index] ? (
                       <CheckCircle2 className="w-4 h-4" />
@@ -244,8 +245,8 @@ export function PreCheckScreen() {
                   <span className={cn(
                     'ml-2 text-sm font-medium hidden sm:block',
                     completedSteps[index] ? 'text-green-600' : 
-                    currentStep === index ? 'text-primary' : 
-                    theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                    index === completedSteps.findIndex(s => !s) ? 'text-primary' : 
+                    'text-muted-foreground'
                   )}>
                     {step}
                   </span>
@@ -253,7 +254,7 @@ export function PreCheckScreen() {
                 {index < steps.length - 1 && (
                   <div className={cn(
                     'flex-1 h-0.5 mx-4 rounded-full',
-                    completedSteps[index] ? 'bg-green-500' : theme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'
+                    completedSteps[index] ? 'bg-green-500' : 'bg-border'
                   )} />
                 )}
               </React.Fragment>
@@ -263,32 +264,25 @@ export function PreCheckScreen() {
       </header>
 
       {/* Main Content */}
-      <div className="px-6 py-8">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="px-6 py-8"
+      >
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8">
           {/* Left - Media Capture */}
-          <div>
-            <div className={cn(
-              "rounded-xl border p-6 h-full",
-              theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
-            )}>
+          <motion.div variants={itemVariants}>
+            <div className="bg-card border border-border rounded-lg p-6 h-full">
               <div className="flex items-center gap-3 mb-6">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center",
-                  theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
-                )}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10">
                   <Webcam className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className={cn(
-                    "font-semibold",
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  )}>
+                  <h2 className="font-semibold text-foreground">
                     Camera & Microphone
                   </h2>
-                  <p className={cn(
-                    "text-sm",
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                  )}>
+                  <p className="text-sm text-muted-foreground">
                     Required for proctoring
                   </p>
                 </div>
@@ -301,49 +295,34 @@ export function PreCheckScreen() {
                 onError={handleError}
               />
 
-              {/* Status indicators */}
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <StatusCard
                   icon={Webcam}
                   label="Camera"
                   ready={cameraReady}
-                  theme={theme}
                 />
                 <StatusCard
                   icon={Mic}
                   label="Microphone"
                   ready={micReady}
-                  theme={theme}
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Right - Checks & Agreement */}
           <div className="space-y-6">
             {/* System Checks */}
-            <div className={cn(
-              "rounded-xl border p-6",
-              theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
-            )}>
+            <motion.div variants={itemVariants} className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center",
-                  theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
-                )}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10">
                   <Fingerprint className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className={cn(
-                    "font-semibold",
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  )}>
+                  <h2 className="font-semibold text-foreground">
                     System Checks
                   </h2>
-                  <p className={cn(
-                    "text-sm",
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                  )}>
+                  <p className="text-sm text-muted-foreground">
                     Verifying your environment
                   </p>
                 </div>
@@ -358,13 +337,11 @@ export function PreCheckScreen() {
                       <div
                         key={item.id}
                         className={cn(
-                          'flex items-center gap-4 p-4 rounded-lg border transition-all',
-                          item.status === 'passed' && theme === 'dark' ? 'bg-green-500/5 border-green-500/20' :
-                          item.status === 'passed' && theme === 'light' ? 'bg-green-50 border-green-200' :
-                          item.status === 'failed' && theme === 'dark' ? 'bg-red-500/5 border-red-500/20' :
-                          item.status === 'failed' && theme === 'light' ? 'bg-red-50 border-red-200' :
-                          item.status === 'checking' ? 'bg-primary/5 border-primary/20' :
-                          theme === 'dark' ? 'bg-secondary/50 border-border' : 'bg-slate-50 border-slate-200'
+                          'flex items-center gap-4 p-4 rounded-lg border',
+                          item.status === 'passed' && 'bg-green-500/5 border-green-500/20',
+                          item.status === 'failed' && 'bg-red-500/5 border-red-500/20',
+                          item.status === 'checking' && 'bg-primary/5 border-primary/20',
+                          item.status === 'pending' && 'bg-muted border-border'
                         )}
                       >
                         <div className={cn(
@@ -372,7 +349,7 @@ export function PreCheckScreen() {
                           item.status === 'passed' && 'bg-green-500/10',
                           item.status === 'failed' && 'bg-red-500/10',
                           item.status === 'checking' && 'bg-primary/10',
-                          item.status === 'pending' && theme === 'dark' ? 'bg-secondary' : 'bg-slate-100'
+                          item.status === 'pending' && 'bg-muted'
                         )}>
                           {item.status === 'checking' ? (
                             <motion.div
@@ -385,23 +362,14 @@ export function PreCheckScreen() {
                           ) : item.status === 'failed' ? (
                             <AlertCircle className="w-5 h-5 text-red-500" />
                           ) : (
-                            <Icon className={cn(
-                              "w-5 h-5",
-                              theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                            )} />
+                            <Icon className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className={cn(
-                            "font-medium text-sm",
-                            theme === 'dark' ? 'text-white' : 'text-slate-900'
-                          )}>
+                          <p className="font-medium text-sm text-foreground">
                             {item.label}
                           </p>
-                          <p className={cn(
-                            "text-xs",
-                            theme === 'dark' ? 'text-slate-500' : 'text-slate-500'
-                          )}>
+                          <p className="text-xs text-muted-foreground">
                             {item.description}
                           </p>
                         </div>
@@ -415,31 +383,19 @@ export function PreCheckScreen() {
                     )
                   })}
               </div>
-            </div>
+            </motion.div>
 
             {/* Agreement */}
-            <div className={cn(
-              "rounded-xl border p-6",
-              theme === 'dark' ? 'bg-card border-border' : 'bg-white border-slate-200'
-            )}>
+            <motion.div variants={itemVariants} className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center",
-                  theme === 'dark' ? 'bg-primary/10' : 'bg-blue-50'
-                )}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10">
                   <Shield className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className={cn(
-                    "font-semibold",
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  )}>
+                  <h2 className="font-semibold text-foreground">
                     Exam Agreement
                   </h2>
-                  <p className={cn(
-                    "text-sm",
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-                  )}>
+                  <p className="text-sm text-muted-foreground">
                     Please read and accept
                   </p>
                 </div>
@@ -453,17 +409,11 @@ export function PreCheckScreen() {
                   'All activities are logged for review',
                 ].map((rule, index) => (
                   <div 
-                    key={index} 
-                    className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg",
-                      theme === 'dark' ? 'bg-secondary/30' : 'bg-slate-50'
-                    )}
+                    key={index}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted"
                   >
                     <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span className={cn(
-                      "text-sm",
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
-                    )}>
+                    <span className="text-sm text-foreground">
                       {rule}
                     </span>
                   </div>
@@ -471,10 +421,10 @@ export function PreCheckScreen() {
               </div>
 
               <label className={cn(
-                'flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border',
+                'flex items-center gap-4 p-4 rounded-lg cursor-pointer border transition-colors',
                 agreed 
                   ? 'bg-primary/5 border-primary/30' 
-                  : theme === 'dark' ? 'bg-secondary/30 border-border hover:border-primary/30' : 'bg-slate-50 border-slate-200 hover:border-primary/30'
+                  : 'bg-muted border-border hover:border-primary/30'
               )}>
                 <input
                   type="checkbox"
@@ -482,40 +432,36 @@ export function PreCheckScreen() {
                   onChange={(e) => setAgreed(e.target.checked)}
                   className="w-5 h-5 rounded border-primary text-primary focus:ring-primary"
                 />
-                <span className={cn(
-                  "text-sm font-medium",
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
-                )}>
+                <span className="text-sm font-medium text-foreground">
                   I agree to the exam rules and consent to proctoring
                 </span>
               </label>
-            </div>
+            </motion.div>
 
             {/* Start Button */}
-            <Button
-              size="lg"
-              className={cn(
-                'w-full h-12 text-sm font-medium',
-                !allPassed && 'opacity-50 cursor-not-allowed'
-              )}
-              disabled={!allPassed}
-              onClick={handleStartExam}
-            >
-              {allPassed ? (
-                <>
-                  Begin Assessment
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Complete All Checks
-                </>
-              )}
-            </Button>
+            <motion.div variants={itemVariants}>
+              <Button
+                size="lg"
+                className="w-full h-12 text-sm font-medium"
+                disabled={!allPassed}
+                onClick={handleStartExam}
+              >
+                {allPassed ? (
+                  <>
+                    Begin Assessment
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Complete All Checks
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -524,49 +470,34 @@ function StatusCard({
   icon: Icon, 
   label, 
   ready, 
-  theme 
 }: { 
   icon: React.ElementType
   label: string
   ready: boolean
-  theme: string
 }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-4 rounded-lg border transition-all',
+        'flex items-center gap-3 p-4 rounded-lg border',
         ready 
-          ? theme === 'dark' ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-200' 
-          : theme === 'dark' ? 'bg-secondary/50 border-border' : 'bg-slate-50 border-slate-200'
+          ? 'bg-green-500/5 border-green-500/20' 
+          : 'bg-muted border-border'
       )}
     >
       <div className={cn(
         'w-10 h-10 rounded-lg flex items-center justify-center',
         ready 
           ? 'bg-primary' 
-          : theme === 'dark' ? 'bg-secondary' : 'bg-slate-100'
+          : 'bg-muted'
       )}>
-        <Icon className={cn('w-5 h-5', ready ? 'text-white' : theme === 'dark' ? 'text-slate-400' : 'text-slate-500')} />
+        <Icon className={cn('w-5 h-5', ready ? 'text-white' : 'text-muted-foreground')} />
       </div>
       <div>
-        <p className={cn(
-          "font-medium text-sm",
-          theme === 'dark' ? 'text-white' : 'text-slate-900'
-        )}>
-          {label}
-        </p>
-        <p className={cn(
-          "text-xs",
-          ready 
-            ? 'text-green-600' 
-            : theme === 'dark' ? 'text-slate-500' : 'text-slate-500'
-        )}>
+        <p className="font-medium text-sm text-foreground">{label}</p>
+        <p className={cn('text-xs', ready ? 'text-green-600' : 'text-muted-foreground')}>
           {ready ? 'Ready' : 'Not detected'}
         </p>
       </div>
-      {ready && (
-        <CheckCircle2 className="w-5 h-5 text-green-500 ml-auto" />
-      )}
     </div>
   )
 }

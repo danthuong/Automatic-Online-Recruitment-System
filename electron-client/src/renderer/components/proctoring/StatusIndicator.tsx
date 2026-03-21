@@ -27,8 +27,8 @@ export function StatusIndicator({
     active: {
       icon: Eye,
       label: 'Monitoring Active',
-      color: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-      iconColor: 'text-emerald-400',
+      color: 'bg-primary/10 text-primary border border-primary/30',
+      iconColor: 'text-primary',
     },
     warning: {
       icon: AlertTriangle,
@@ -53,7 +53,7 @@ export function StatusIndicator({
         <Icon className={cn('h-4 w-4', config.iconColor)} />
         <span className="text-sm font-medium">{config.label}</span>
         {status === 'active' && (
-          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50" />
+          <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
         )}
       </div>
       {status !== 'idle' && (
