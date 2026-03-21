@@ -4,9 +4,11 @@ const screeningDetailsSchema = new MongooseSchema(
   {
     skillMatchScore: { type: Number },
     experienceMatchScore: { type: Number },
+    educationMatchScore: { type: Number },
     overallScore: { type: Number },
     skillGaps: { type: [String] },
     strengths: { type: [String] },
+    matchedPreferredSkills: { type: [String] },
     llmFeedback: { type: String },
     githubAnalysis: {
       repos: { type: Number },

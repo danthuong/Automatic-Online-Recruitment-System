@@ -226,7 +226,33 @@ export function ApplicationReviewPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  {(application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCREENING_FAILED) && (
+                    <div className={`flex items-center gap-3 p-3 rounded-lg border ${application.status === ApplicationStatus.SCREENING_PASSED ? 'bg-success/5 border-success/20' : 'bg-destructive/5 border-destructive/20'}`}>
+                      {application.status === ApplicationStatus.SCREENING_PASSED ? (
+                        <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className={`text-sm font-semibold ${application.status === ApplicationStatus.SCREENING_PASSED ? 'text-success' : 'text-destructive'}`}>
+                          {application.status === ApplicationStatus.SCREENING_PASSED ? 'Auto-Screened: Passed' : 'Auto-Screened: Failed'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Decision made by AI based on CV-to-JD matching score
+                        </p>
+                      </div>
+                      {screeningDetails.overallScore !== undefined && (
+                        <div className={`text-center flex-shrink-0 px-3 py-1.5 rounded-lg border ${application.status === ApplicationStatus.SCREENING_PASSED ? 'border-success/30 bg-success/10' : 'border-destructive/30 bg-destructive/10'}`}>
+                          <p className={`text-2xl font-bold ${application.status === ApplicationStatus.SCREENING_PASSED ? 'text-success' : 'text-destructive'}`}>
+                            {screeningDetails.overallScore}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Overall</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-4 gap-4">
                     <div className="text-center p-4 rounded-lg bg-blue-50 border border-blue-100">
                       <p className="text-3xl font-bold text-blue-600">{screeningDetails.skillMatchScore ?? '-'}</p>
                       <p className="text-xs text-muted-foreground mt-1">Skill Match</p>
@@ -234,6 +260,10 @@ export function ApplicationReviewPage() {
                     <div className="text-center p-4 rounded-lg bg-purple-50 border border-purple-100">
                       <p className="text-3xl font-bold text-purple-600">{screeningDetails.experienceMatchScore ?? '-'}</p>
                       <p className="text-xs text-muted-foreground mt-1">Experience</p>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-amber-50 border border-amber-100">
+                      <p className="text-3xl font-bold text-amber-600">{screeningDetails.educationMatchScore ?? '-'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Education</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-primary/10 border border-primary/20">
                       <p className="text-3xl font-bold text-primary">{screeningDetails.overallScore ?? '-'}</p>

@@ -86,9 +86,11 @@ export interface ApplicationResponse {
   screeningDetails?: {
     skillMatchScore?: number
     experienceMatchScore?: number
+    educationMatchScore?: number
     overallScore?: number
     skillGaps?: string[]
     strengths?: string[]
+    matchedPreferredSkills?: string[]
     llmFeedback?: string
     githubAnalysis?: {
       repos?: number

@@ -65,7 +65,7 @@ Actors:
 ## 3. Job Discovery & Apply (Candidate)
 
 ### Flow:
-1. Candidate browses job list (like LinkedIn feed)
+1. Candidate browses job list
 2. Candidate selects a job
 3. Candidate clicks "Apply"
 
@@ -109,29 +109,56 @@ to Backend API
   feedback: string
 }
 
+---
+
+## 5. Test Invitation (Immediate After Pass)
+
 ### Decision:
 - If fail → return rejection to client
-- If pass → proceed to interview scheduling
+- If pass → generate test session
 
 ---
 
-## 5. Interview Scheduling (Candidate)
+### Flow (Pass Case):
 
-### Flow:
-If candidate passes CV screening:
+1. Backend generates:
+   - CandidateID
+   - TestID
 
-1. System sends notification
-2. Candidate fills form:
-   - Select date/time
-   - Setup webcam permission
-   - Prepare environment
+2. System sends announcement to candidate:
 
-### Data Model (Interview Schedule):
+Includes:
+- ✅ Passed CV screening notification
+- 🆔 CandidateID
+- 🧪 TestID
+- 📥 Electron App download/launch link
+- 🎥 Requirement:
+  - Webcam required
+  - Microphone required
+
+---
+
+### Candidate Action:
+
+1. Candidate prepares environment:
+   - Ensure camera works
+   - Ensure microphone works
+
+2. Candidate downloads or launches Electron App
+
+3. Candidate enters:
+   - CandidateID
+   - TestID
+
+---
+
+### Data Model (Test Session):
+
 {
   candidate_id,
+  test_id,
   job_id,
-  scheduled_time,
-  status: "scheduled"
+  status: "ready" | "testing" | "completed"
 }
 
 ---
@@ -139,13 +166,19 @@ If candidate passes CV screening:
 ## 6. Coding Interview (Electron App + Anti-Cheat)
 
 ### Flow:
-1. At scheduled time → Candidate opens Electron App
-2. Candidate enters Test ID
+1. Candidate opens Electron App
+2. Inputs CandidateID + TestID
+3. App verifies session with backend
+4. Starts test
 
-### Electron App:
+---
+
+### Electron App Behavior:
+
 - Locks screen (kiosk mode)
 - Activates anti-cheat system
 - Starts proctoring
+- Streams monitoring data to backend
 
 ---
 
@@ -161,6 +194,8 @@ Input:
 Output:
 - match_score
 - verified: boolean
+
+If not verified → block test
 
 ---
 
@@ -211,7 +246,6 @@ Candidate submits:
 
 ### Flow:
 1. Backend receives submission
-2. Process:
 
 #### Coding:
 - Run test cases
@@ -223,7 +257,7 @@ Candidate submits:
 
 #### Anti-Cheat:
 - Analyze proctoring logs
-- Check anomalies
+- Detect anomalies
 
 ---
 
@@ -241,7 +275,7 @@ Candidate submits:
 ### HR can view:
 - Candidate list per job
 - CV score
-- Interview result
+- Test score
 - Cheating status
 - Proctoring logs
 
@@ -271,6 +305,7 @@ System or HR decides:
 - No direct client → AI calls
 - All decisions must be logged
 - Proctoring must run on client (Electron)
+- Test session must be validated using CandidateID + TestID
 
 ---
 
@@ -288,8 +323,10 @@ System or HR decides:
 Candidate Apply →
 CV Screening →
 Pass →
-Schedule →
-Electron Test →
+Generate TestID + CandidateID →
+Send Announcement →
+Candidate Launch Electron App →
+Test →
 Auto Grading →
 HR Dashboard →
 Final Decision

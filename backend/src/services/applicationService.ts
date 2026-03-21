@@ -91,7 +91,12 @@ export class ApplicationService {
     return base;
   }
 
-  static async create(candidateId: string, jobId: string): Promise<ApplicationResponse> {
+  static async create(
+    candidateId: string,
+    jobId: string,
+    aiScreeningData?: Record<string, unknown> | null,
+    initialStatus: ApplicationStatus = ApplicationStatus.PENDING
+  ): Promise<ApplicationResponse> {
     const existing = await Application.findOne({ candidateId, jobId });
     if (existing) {
       throw new ConflictError('You have already applied to this job');
@@ -106,11 +111,27 @@ export class ApplicationService {
       throw new ForbiddenError('This job is not accepting applications');
     }
 
+    const screeningDetails: Record<string, unknown> | undefined = aiScreeningData
+      ? {
+          overallScore: aiScreeningData.overallScore as number | undefined,
+          skillMatchScore: aiScreeningData.skillMatchScore as number | undefined,
+          experienceMatchScore: aiScreeningData.experienceMatchScore as number | undefined,
+          educationMatchScore: aiScreeningData.educationMatchScore as number | undefined,
+          skillGaps: Array.isArray(aiScreeningData.skillGaps) ? (aiScreeningData.skillGaps as string[]) : undefined,
+          strengths: Array.isArray(aiScreeningData.strengths) ? (aiScreeningData.strengths as string[]) : undefined,
+          matchedPreferredSkills: Array.isArray(aiScreeningData.matchedPreferredSkills)
+            ? (aiScreeningData.matchedPreferredSkills as string[])
+            : undefined,
+          llmFeedback: aiScreeningData.llmFeedback as string | undefined,
+        }
+      : undefined;
+
     const application = await Application.create({
       candidateId,
       jobId,
-      status: ApplicationStatus.PENDING,
+      status: initialStatus,
       appliedAt: new Date(),
+      screeningDetails,
     });
 
     await JobService.incrementApplicationCount(jobId);

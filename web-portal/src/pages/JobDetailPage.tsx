@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, Building2, CheckCircle2, Users, Calendar } from 'lucide-react'
+import {
+  ArrowLeft, MapPin, Clock, Briefcase, DollarSign, Building2,
+  CheckCircle2, Users, Calendar, Loader2,
+} from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { jobService } from '@/services/jobService'
 import { applicationService } from '@/services/applicationService'
 import { useAuth } from '@/hooks/useAuth'
+import type { ApplicationResponse } from '@/types/job'
 import type { JobResponse } from '@/types/job'
 import { JobStatus, JobType, ExperienceLevel } from '@/types/index'
 
@@ -34,6 +38,7 @@ export function JobDetailPage() {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [job, setJob] = useState<JobResponse | null>(null)
+  const [application, setApplication] = useState<ApplicationResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
@@ -48,6 +53,7 @@ export function JobDetailPage() {
       .then(([jobData, alreadyApplied]) => {
         setJob(jobData)
         setApplied(alreadyApplied)
+        setApplication(null)
       })
       .catch(() => {
         toast.error('Job not found')
@@ -64,9 +70,14 @@ export function JobDetailPage() {
     if (!job) return
     setApplying(true)
     try {
-      await applicationService.apply(job.id)
+      const result = await applicationService.apply(job.id)
+      setApplication(result)
       setApplied(true)
-      toast.success('Application submitted successfully!')
+      if (result.status === 'screening_passed') {
+        toast.success('Application submitted! AI screening passed — you can now schedule your assessment.')
+      } else {
+        toast.error('Application submitted. Unfortunately, your CV did not meet the screening threshold for this position.')
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -270,7 +281,58 @@ export function JobDetailPage() {
                   </div>
                 )}
 
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
+                  {applied && !application && (
+                    <p className="text-xs text-center text-muted-foreground">
+                      Your application has been submitted
+                    </p>
+                  )}
+
+                  {applied && application && (
+                    <div className={`text-center text-sm font-medium px-3 py-2 rounded-lg ${application.status === 'screening_passed' ? 'bg-success/10 text-success border border-success/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+                      {application.status === 'screening_passed' ? 'Screening Passed' : 'Screening Did Not Pass'}
+                    </div>
+                  )}
+
+                  {applied && application?.screeningDetails && (
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">AI Screening Results</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {application.screeningDetails.overallScore !== undefined && (
+                          <div className="text-center p-2 rounded bg-primary/5 border border-primary/10">
+                            <p className="text-lg font-bold text-primary">{application.screeningDetails.overallScore}</p>
+                            <p className="text-[10px] text-muted-foreground">Overall</p>
+                          </div>
+                        )}
+                        {application.screeningDetails.skillMatchScore !== undefined && (
+                          <div className="text-center p-2 rounded bg-blue-50 border border-blue-100">
+                            <p className="text-lg font-bold text-blue-600">{application.screeningDetails.skillMatchScore}</p>
+                            <p className="text-[10px] text-muted-foreground">Skills</p>
+                          </div>
+                        )}
+                        {application.screeningDetails.experienceMatchScore !== undefined && (
+                          <div className="text-center p-2 rounded bg-purple-50 border border-purple-100">
+                            <p className="text-lg font-bold text-purple-600">{application.screeningDetails.experienceMatchScore}</p>
+                            <p className="text-[10px] text-muted-foreground">Experience</p>
+                          </div>
+                        )}
+                      </div>
+                      {application.screeningDetails.llmFeedback && (
+                        <p className="text-xs text-muted-foreground italic">
+                          "{application.screeningDetails.llmFeedback}"
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {application.screeningDetails.strengths?.map((s) => (
+                          <Badge key={s} variant="success" className="text-[10px] bg-green-50 text-green-700 border-green-200">{s}</Badge>
+                        ))}
+                        {application.screeningDetails.skillGaps?.map((g) => (
+                          <Badge key={g} variant="destructive" className="text-[10px]">{g}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     className="w-full"
                     size="lg"
@@ -278,13 +340,14 @@ export function JobDetailPage() {
                     isLoading={applying}
                     disabled={applied || job.status !== JobStatus.ACTIVE}
                   >
-                    {applied ? 'Already Applied' : 'Apply Now'}
+                    {applying ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Screening...</>
+                    ) : applied ? (
+                      <><CheckCircle2 className="w-4 h-4 mr-2" />Already Applied</>
+                    ) : (
+                      <>Apply Now</>
+                    )}
                   </Button>
-                  {applied && (
-                    <p className="text-xs text-center text-success mt-2">
-                      Your application has been submitted
-                    </p>
-                  )}
                 </div>
               </CardContent>
             </Card>

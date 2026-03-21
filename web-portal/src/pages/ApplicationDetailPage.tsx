@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 const PIPELINE_STAGES = [
   { key: ApplicationStatus.PENDING, label: 'Applied', icon: FileText },
   { key: ApplicationStatus.SCREENING, label: 'Screening', icon: AlertCircle },
-  { key: ApplicationStatus.SCREENING_PASSED, label: 'Passed', icon: CheckCircle2 },
+  { key: ApplicationStatus.SCREENING_PASSED, label: 'Screening Passed', icon: CheckCircle2 },
   { key: ApplicationStatus.SCHEDULED, label: 'Scheduled', icon: Calendar },
   { key: ApplicationStatus.TEST_COMPLETED, label: 'Test Done', icon: CheckCircle2 },
   { key: ApplicationStatus.OFFERED, label: 'Offered', icon: Star },
@@ -54,11 +54,11 @@ function getStageIndex(status: string): number {
     [ApplicationStatus.PENDING]: 0,
     [ApplicationStatus.SCREENING]: 1,
     [ApplicationStatus.SCREENING_PASSED]: 1,
-    [ApplicationStatus.SCREENING_FAILED]: -1,
+    [ApplicationStatus.SCREENING_FAILED]: 1,
     [ApplicationStatus.SCHEDULED]: 3,
     [ApplicationStatus.TEST_COMPLETED]: 4,
     [ApplicationStatus.OFFERED]: 5,
-    [ApplicationStatus.REJECTED]: -1,
+    [ApplicationStatus.REJECTED]: 1,
   }
   return map[status] ?? -1
 }
@@ -166,33 +166,35 @@ export function ApplicationDetailPage() {
           </div>
         </div>
 
-        {application.status !== ApplicationStatus.REJECTED && (
-          <Card>
-            <CardContent className="pt-6">
+        <Card>
+          <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 {PIPELINE_STAGES.map((stage, idx) => {
                   const isActive = idx === currentStage
                   const isPast = idx < currentStage
-                  const Icon = stage.icon
+                  const isFailed = (application.status === ApplicationStatus.SCREENING_FAILED || application.status === ApplicationStatus.REJECTED) && idx === currentStage
+                  const Icon = isFailed ? XCircle : stage.icon
                   return (
                     <div key={stage.key} className="flex items-center flex-1">
                       <div className="flex flex-col items-center">
                         <div
                           className={cn(
                             'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all',
-                            isActive
+                            isFailed
+                              ? 'border-destructive bg-destructive/10 text-destructive'
+                              : isActive
                               ? 'border-primary bg-primary text-primary-foreground scale-110'
                               : isPast
                               ? 'border-success bg-success text-white'
                               : 'border-muted bg-muted text-muted-foreground'
                           )}
                         >
-                          <Icon className="w-5 h-5" />
+                          <Icon className={cn('w-5 h-5', isActive && !isFailed && 'scale-110')} />
                         </div>
                         <span
                           className={cn(
                             'text-xs mt-2 font-medium text-center',
-                            isActive ? 'text-primary' : isPast ? 'text-success' : 'text-muted-foreground'
+                            isFailed ? 'text-destructive' : isActive ? 'text-primary' : isPast ? 'text-success' : 'text-muted-foreground'
                           )}
                         >
                           {stage.label}
@@ -202,7 +204,7 @@ export function ApplicationDetailPage() {
                         <div
                           className={cn(
                             'flex-1 h-0.5 mx-2',
-                            idx < currentStage ? 'bg-success' : 'bg-muted'
+                            isFailed ? 'bg-destructive/30' : idx < currentStage ? 'bg-success' : 'bg-muted'
                           )}
                         />
                       )}
@@ -212,9 +214,8 @@ export function ApplicationDetailPage() {
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {application.status === ApplicationStatus.REJECTED && (
+        {(application.status === ApplicationStatus.SCREENING_FAILED || application.status === ApplicationStatus.REJECTED) && (
           <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="pt-6 text-center">
               <XCircle className="w-12 h-12 text-destructive mx-auto mb-3" />
@@ -237,7 +238,7 @@ export function ApplicationDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="text-center p-4 rounded-lg bg-blue-50 border border-blue-100">
                       <p className="text-3xl font-bold text-blue-600">{screeningDetails.skillMatchScore ?? '-'}</p>
                       <p className="text-xs text-muted-foreground mt-1">Skill Match</p>
@@ -246,9 +247,13 @@ export function ApplicationDetailPage() {
                       <p className="text-3xl font-bold text-purple-600">{screeningDetails.experienceMatchScore ?? '-'}</p>
                       <p className="text-xs text-muted-foreground mt-1">Experience</p>
                     </div>
+                    <div className="text-center p-4 rounded-lg bg-amber-50 border border-amber-100">
+                      <p className="text-3xl font-bold text-amber-600">{screeningDetails.educationMatchScore ?? '-'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Education</p>
+                    </div>
                     <div className="text-center p-4 rounded-lg bg-primary/10 border border-primary/20">
                       <p className="text-3xl font-bold text-primary">{screeningDetails.overallScore ?? '-'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Overall Score</p>
+                      <p className="text-xs text-muted-foreground mt-1">Overall</p>
                     </div>
                   </div>
 
@@ -286,16 +291,22 @@ export function ApplicationDetailPage() {
                     </div>
                   )}
 
-                  {screeningDetails.strengths && screeningDetails.strengths.length > 0 && (
+                  {(screeningDetails.strengths?.length ?? 0) > 0 || (screeningDetails.matchedPreferredSkills?.length ?? 0) > 0 ? (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-2">Strengths</p>
+                      <p className="text-xs text-muted-foreground mb-2">Matched Skills</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {screeningDetails.strengths.map((s) => (
+                        {screeningDetails.strengths?.map((s) => (
                           <Badge key={s} variant="success" className="text-xs bg-green-50 text-green-700 border-green-200">{s}</Badge>
                         ))}
+                        {screeningDetails.matchedPreferredSkills?.map((s) => (
+                          <Badge key={s} variant="default" className="text-xs bg-amber-50 text-amber-700 border-amber-200">{s} *</Badge>
+                        ))}
                       </div>
+                      {screeningDetails.matchedPreferredSkills && screeningDetails.matchedPreferredSkills.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-1">* Preferred skills</p>
+                      )}
                     </div>
-                  )}
+                  ) : null}
 
                   {screeningDetails.skillGaps && screeningDetails.skillGaps.length > 0 && (
                     <div>
@@ -311,7 +322,39 @@ export function ApplicationDetailPage() {
               </Card>
             )}
 
-            {(application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCHEDULED) && (
+            {(application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCREENING_FAILED) && screeningDetails && (
+          <Card className={application.status === ApplicationStatus.SCREENING_PASSED ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}>
+            <CardContent className="pt-6 flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${application.status === ApplicationStatus.SCREENING_PASSED ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                {application.status === ApplicationStatus.SCREENING_PASSED ? (
+                  <CheckCircle2 className="w-6 h-6 text-success" />
+                ) : (
+                  <XCircle className="w-6 h-6 text-destructive" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className={`font-semibold ${application.status === ApplicationStatus.SCREENING_PASSED ? 'text-success' : 'text-destructive'}`}>
+                  {application.status === ApplicationStatus.SCREENING_PASSED ? 'Screening Passed!' : 'Screening Did Not Pass'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {application.status === ApplicationStatus.SCREENING_PASSED
+                    ? 'Your CV matched the job requirements. You can now schedule your technical assessment.'
+                    : 'Your CV did not meet the minimum score threshold for this position.'}
+                </p>
+              </div>
+              {screeningDetails.overallScore !== undefined && (
+                <div className="text-center flex-shrink-0">
+                  <p className={`text-3xl font-bold ${application.status === ApplicationStatus.SCREENING_PASSED ? 'text-success' : 'text-destructive'}`}>
+                    {screeningDetails.overallScore}
+                  </p>
+                  <p className="text-xs text-muted-foreground">AI Score</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {(application.status === ApplicationStatus.SCREENING_PASSED || application.status === ApplicationStatus.SCHEDULED) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">

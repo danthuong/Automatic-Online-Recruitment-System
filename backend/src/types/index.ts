@@ -261,9 +261,11 @@ export interface JobResponse {
 export interface ScreeningDetails {
   skillMatchScore?: number;
   experienceMatchScore?: number;
+  educationMatchScore?: number;
   overallScore?: number;
   skillGaps?: string[];
   strengths?: string[];
+  matchedPreferredSkills?: string[];
   llmFeedback?: string;
   githubAnalysis?: {
     repos?: number;

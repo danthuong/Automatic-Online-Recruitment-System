@@ -1,7 +1,7 @@
 # Backend API Documentation
 
 **Automatic Online Recruitment System**  
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Base URL:** `http://localhost:5000/api/v1`
 
 ---
@@ -562,6 +562,13 @@ Valid statuses: `draft`, `active`, `paused`, `closed`.
 
 Apply to a job. **Candidate only.**
 
+On apply, the backend calls the AI Matching Service (`AI_MATCHING_URL`) with the candidate's CV and job description to perform instant CV screening. The `overallScore` returned by the AI service is compared against `SCREENING_THRESHOLD` (default: 70, configurable via `SCREENING_THRESHOLD` env var):
+
+- `overallScore >= SCREENING_THRESHOLD` → application status is set to `screening_passed`
+- `overallScore < SCREENING_THRESHOLD` → application status is set to `screening_failed`
+
+AI results are stored in `screeningDetails` and returned immediately.
+
 **Headers:** `Authorization: Bearer <access_token>`
 
 **Request Body:**
@@ -574,7 +581,36 @@ Apply to a job. **Candidate only.**
 
 > Cannot apply to the same job twice. Job must be `active`.
 
-**Response (201):** Returns the created application with nested `candidate` and `job` details.
+**Response (201):** Returns the created application with AI screening results pre-populated.
+
+```json
+{
+  "success": true,
+  "message": "Application submitted successfully",
+  "data": {
+    "id": "...",
+    "candidateId": "...",
+    "jobId": "...",
+    "status": "screening_passed | screening_failed",
+    "screeningDetails": {
+      "overallScore": 79,
+      "skillMatchScore": 85,
+      "experienceMatchScore": 70,
+      "educationMatchScore": 80,
+      "skillGaps": ["missing skill 1", "missing skill 2"],
+      "strengths": ["matched skill 1", "matched skill 2"],
+      "matchedPreferredSkills": ["preferred skill matched"],
+      "llmFeedback": "The candidate lacks specific skills..."
+    },
+    "candidate": { /* nested candidate */ },
+    "job": { /* nested job */ },
+    "appliedAt": "2026-03-21T00:00:00.000Z",
+    "createdAt": "2026-03-21T00:00:00.000Z"
+  }
+}
+```
+
+> If the AI Matching Service call fails, the application is still created with `status: screening_failed` and `screeningDetails: null`. The application flow never fails due to AI unavailability.
 
 ---
 
@@ -591,6 +627,7 @@ Get all applications for the authenticated candidate. **Candidate only.**
 | `page` | number | Page number |
 | `limit` | number | Items per page (max 100) |
 | `status` | enum | Filter by application status |
+| `jobId` | string | Filter by specific job |
 
 **Response (200):** Returns paginated applications with nested `job` details.
 
@@ -651,12 +688,14 @@ Get a single application with nested `candidate` and `job` details.
     "cvScore": 85,
     "screeningFeedback": "Strong candidate",
     "screeningDetails": {
-      "skillMatchScore": 90,
-      "experienceMatchScore": 80,
-      "overallScore": 85,
-      "skillGaps": ["Testing"],
-      "strengths": ["React", "TypeScript"],
-      "llmFeedback": "Excellent candidate",
+      "overallScore": 79,
+      "skillMatchScore": 85,
+      "experienceMatchScore": 70,
+      "educationMatchScore": 80,
+      "skillGaps": ["missing skill 1", "missing skill 2"],
+      "strengths": ["matched skill 1", "matched skill 2"],
+      "matchedPreferredSkills": ["preferred skill matched"],
+      "llmFeedback": "The candidate lacks specific skills...",
       "githubAnalysis": {
         "repos": 15,
         "stars": 120,
@@ -689,11 +728,13 @@ Update application status. **HR and Admin only.**
   "cvScore": 85,
   "screeningFeedback": "Strong candidate",
   "screeningDetails": {
-    "skillMatchScore": 90,
-    "experienceMatchScore": 80,
-    "overallScore": 85,
-    "skillGaps": ["Testing"],
+    "overallScore": 79,
+    "skillMatchScore": 85,
+    "experienceMatchScore": 70,
+    "educationMatchScore": 80,
+    "skillGaps": ["missing skill 1"],
     "strengths": ["React", "TypeScript"],
+    "matchedPreferredSkills": ["GraphQL"],
     "llmFeedback": "Excellent candidate for frontend role"
   },
   "hrNotes": "Good technical skills"
@@ -1153,13 +1194,27 @@ Serve a previously uploaded file by its ID. Returns the raw file.
 | `status` | enum | Application status |
 | `cvScore` | number | AI screening score (0-100) |
 | `screeningFeedback` | string | Human-readable feedback |
-| `screeningDetails` | object | LLM analysis results |
+| `screeningDetails` | object | AI screening results (see below) |
 | `appliedAt` | Date | Application timestamp |
 | `screenedAt` | Date | Screening completion timestamp |
 | `hrNotes` | string | HR manual notes |
 | `hrDecision` | enum | `pending`, `approved`, `rejected` |
 | `createdAt` | Date | Creation timestamp |
 | `updatedAt` | Date | Last update timestamp |
+
+#### `screeningDetails` Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `overallScore` | number | Overall match score (0-100) |
+| `skillMatchScore` | number | Skill match score (0-100) |
+| `experienceMatchScore` | number | Experience match score (0-100) |
+| `educationMatchScore` | number | Education match score (0-100) |
+| `skillGaps` | string[] | Skills the candidate is missing |
+| `strengths` | string[] | Matched required skills |
+| `matchedPreferredSkills` | string[] | Matched preferred/nice-to-have skills |
+| `llmFeedback` | string | AI-generated feedback text |
+| `githubAnalysis` | object | GitHub profile analysis (`repos`, `stars`, `mainLanguages`, `activity`) |
 
 **Application Status Flow:**
 
@@ -1270,6 +1325,7 @@ JWT_SECRET=your_jwt_secret_here
 JWT_REFRESH_SECRET=your_refresh_secret_here
 BCRYPT_SALT_ROUNDS=12
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+AI_MATCHING_URL=http://10.18.151.49:8000/api/matching/cv-jd
 ```
 
 ### Commands
