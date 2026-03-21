@@ -63,3 +63,6 @@ electron-client/release/
 # Temporary files
 *.tmp
 temp/
+
+# models
+*.h5
