@@ -130,6 +130,32 @@ class EvaluateWritingResponse(BaseModel):
     feedback: str  # 2-sentence feedback
 
 
+class QuestionScore(BaseModel):
+    """Score for a single question."""
+    question_id: int
+    question_type: str  # "code", "github", "jd"
+    raw_score: float  # pass_percentage for code, 1-10 for essay
+    weighted_score: float  # score after applying weight
+
+
+class InterviewScoreRequest(BaseModel):
+    """Request to calculate total interview score."""
+    # Q1-Q3: Code questions
+    q1: Optional[Dict] = None  # {"problem_id": int, "pass_percentage": float, "total_tests": int, "passed_tests": int}
+    q2: Optional[Dict] = None
+    q3: Optional[Dict] = None
+    # Q4-Q5: Essay questions
+    q4: Optional[Dict] = None  # {"question_text": str, "user_answer": str, "llm_score": int}
+    q5: Optional[Dict] = None
+
+
+class InterviewScoreResponse(BaseModel):
+    """Response with total score and breakdown."""
+    total_score: float  # 0-100
+    breakdown: List[QuestionScore]
+    details: Dict[str, Any]  # Detailed info for each question
+
+
 # ====================
 # Helper Functions
 # ====================
@@ -605,6 +631,166 @@ Return ONLY a JSON object with this exact structure (no other text):
             score=score,
             feedback="Answer received. Please expand on your response with more specific details."
         )
+
+
+@router.post("/calculate_score", response_model=InterviewScoreResponse)
+async def calculate_interview_score(request: InterviewScoreRequest):
+    """
+    Calculate total interview score.
+
+    Scoring weights:
+    - Q1 (Easy code): 10% = (passed_tests / total_tests) * 10
+    - Q2 (Medium code): 20% = (passed_tests / total_tests) * 20
+    - Q3 (Medium code): 20% = (passed_tests / total_tests) * 20
+    - Q4 (GitHub essay): 25% = (llm_score / 10) * 25
+    - Q5 (JD essay): 25% = (llm_score / 10) * 25
+    """
+    breakdown = []
+    details = {}
+
+    total_score = 0.0
+
+    # Q1: Easy code - 10% weight
+    if request.q1:
+        pass_pct = request.q1.get("pass_percentage", 0)
+        weighted = pass_pct * 0.10  # 10% weight
+        total_score += weighted
+        breakdown.append(QuestionScore(
+            question_id=1,
+            question_type="code",
+            raw_score=pass_pct,
+            weighted_score=round(weighted, 2)
+        ))
+        details["q1"] = {
+            "difficulty": "easy",
+            "weight": "10%",
+            "passed_tests": request.q1.get("passed_tests", 0),
+            "total_tests": request.q1.get("total_tests", 0),
+            "pass_percentage": pass_pct,
+            "weighted_score": round(weighted, 2)
+        }
+    else:
+        breakdown.append(QuestionScore(
+            question_id=1,
+            question_type="code",
+            raw_score=0,
+            weighted_score=0
+        ))
+        details["q1"] = {"status": "not attempted", "weight": "10%"}
+
+    # Q2: Medium code - 20% weight
+    if request.q2:
+        pass_pct = request.q2.get("pass_percentage", 0)
+        weighted = pass_pct * 0.20  # 20% weight
+        total_score += weighted
+        breakdown.append(QuestionScore(
+            question_id=2,
+            question_type="code",
+            raw_score=pass_pct,
+            weighted_score=round(weighted, 2)
+        ))
+        details["q2"] = {
+            "difficulty": "medium",
+            "weight": "20%",
+            "passed_tests": request.q2.get("passed_tests", 0),
+            "total_tests": request.q2.get("total_tests", 0),
+            "pass_percentage": pass_pct,
+            "weighted_score": round(weighted, 2)
+        }
+    else:
+        breakdown.append(QuestionScore(
+            question_id=2,
+            question_type="code",
+            raw_score=0,
+            weighted_score=0
+        ))
+        details["q2"] = {"status": "not attempted", "weight": "20%"}
+
+    # Q3: Medium code - 20% weight
+    if request.q3:
+        pass_pct = request.q3.get("pass_percentage", 0)
+        weighted = pass_pct * 0.20  # 20% weight
+        total_score += weighted
+        breakdown.append(QuestionScore(
+            question_id=3,
+            question_type="code",
+            raw_score=pass_pct,
+            weighted_score=round(weighted, 2)
+        ))
+        details["q3"] = {
+            "difficulty": "medium",
+            "weight": "20%",
+            "passed_tests": request.q3.get("passed_tests", 0),
+            "total_tests": request.q3.get("total_tests", 0),
+            "pass_percentage": pass_pct,
+            "weighted_score": round(weighted, 2)
+        }
+    else:
+        breakdown.append(QuestionScore(
+            question_id=3,
+            question_type="code",
+            raw_score=0,
+            weighted_score=0
+        ))
+        details["q3"] = {"status": "not attempted", "weight": "20%"}
+
+    # Q4: GitHub essay - 25% weight
+    if request.q4:
+        llm_score = request.q4.get("llm_score", 0)  # 1-10
+        weighted = (llm_score / 10) * 25  # 25% weight
+        total_score += weighted
+        breakdown.append(QuestionScore(
+            question_id=4,
+            question_type="github",
+            raw_score=float(llm_score),
+            weighted_score=round(weighted, 2)
+        ))
+        details["q4"] = {
+            "type": "github_essay",
+            "weight": "25%",
+            "llm_score": llm_score,
+            "weighted_score": round(weighted, 2)
+        }
+    else:
+        breakdown.append(QuestionScore(
+            question_id=4,
+            question_type="github",
+            raw_score=0,
+            weighted_score=0
+        ))
+        details["q4"] = {"status": "not attempted", "weight": "25%"}
+
+    # Q5: JD essay - 25% weight
+    if request.q5:
+        llm_score = request.q5.get("llm_score", 0)  # 1-10
+        weighted = (llm_score / 10) * 25  # 25% weight
+        total_score += weighted
+        breakdown.append(QuestionScore(
+            question_id=5,
+            question_type="jd",
+            raw_score=float(llm_score),
+            weighted_score=round(weighted, 2)
+        ))
+        details["q5"] = {
+            "type": "jd_essay",
+            "weight": "25%",
+            "llm_score": llm_score,
+            "weighted_score": round(weighted, 2)
+        }
+    else:
+        breakdown.append(QuestionScore(
+            question_id=5,
+            question_type="jd",
+            raw_score=0,
+            weighted_score=0
+        ))
+        details["q5"] = {"status": "not attempted", "weight": "25%"}
+
+    return InterviewScoreResponse(
+        total_score=round(total_score, 2),
+        breakdown=breakdown,
+        details=details
+    )
 
 
 @router.get("/problems")
