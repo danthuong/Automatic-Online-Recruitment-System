@@ -18,6 +18,8 @@ class LLMProvider(str, Enum):
     OLLAMA = "ollama"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    MINIMAX = "minimax"
+    OPENROUTER = "openrouter"
 
 
 class MessageType(str, Enum):
@@ -48,6 +50,8 @@ class LLMService:
     def __init__(self, provider: Optional[LLMProvider] = None):
         self.provider = LLMProvider(provider.value if provider else settings.llm_provider)
         self._client = None
+        # Track if we're using OpenRouter (for method selection)
+        self._is_openrouter = False
 
     @property
     def client(self):
@@ -87,6 +91,36 @@ class LLMService:
             except ImportError:
                 raise ImportError("anthropic package not installed")
 
+        if self.provider == LLMProvider.MINIMAX:
+            # Check if it's actually an OpenRouter key (starts with sk-or-v1)
+            if settings.minimax_api_key and settings.minimax_api_key.startswith("sk-or-v1"):
+                # It's an OpenRouter key - use OpenAI client
+                logger.info("Detected OpenRouter API key, using OpenAI client")
+                self._is_openrouter = True
+                try:
+                    from openai import OpenAI
+                    return OpenAI(
+                        api_key=settings.minimax_api_key,
+                        base_url="https://openrouter.ai/api/v1",
+                        default_headers={
+                            "HTTP-Referer": "http://localhost:8000",
+                            "X-Title": "AI Interviewer"
+                        }
+                    )
+                except ImportError:
+                    raise ImportError("openai package not installed")
+
+            if not settings.minimax_api_key:
+                raise ValueError("MiniMax API key not configured")
+            try:
+                import httpx
+                return MiniMaxClient(
+                    api_key=settings.minimax_api_key,
+                    model=settings.minimax_model
+                )
+            except ImportError:
+                raise ImportError("httpx not installed")
+
         raise ValueError(f"Unknown LLM provider: {self.provider}")
 
     def chat(
@@ -120,15 +154,34 @@ class LLMService:
         message_type = self._classify_message(message, context)
         prompt = self._build_prompt(message, context, message_type, conversation_history)
 
-        # Generate response based on provider
-        if self.provider == LLMProvider.OLLAMA:
-            reply = self._generate_ollama(prompt, conversation_history or [])
-        elif self.provider == LLMProvider.OPENAI:
-            reply = self._generate_openai(prompt, conversation_history or [])
-        elif self.provider == LLMProvider.ANTHROPIC:
-            reply = self._generate_anthropic(prompt, conversation_history or [])
-        else:
-            raise ValueError(f"Unsupported provider: {self.provider}")
+        # Generate response based on provider, with fallback to Ollama on failure
+        reply = None
+        error_msg = None
+
+        try:
+            if self.provider == LLMProvider.OLLAMA:
+                reply = self._generate_ollama(prompt, conversation_history or [])
+            elif self.provider == LLMProvider.OPENAI:
+                reply = self._generate_openai(prompt, conversation_history or [])
+            elif self.provider == LLMProvider.ANTHROPIC:
+                reply = self._generate_anthropic(prompt, conversation_history or [])
+            elif self.provider == LLMProvider.MINIMAX:
+                reply = self._generate_minimax(prompt, conversation_history or [])
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
+        except Exception as e:
+            logger.error(f"Primary LLM provider failed: {e}")
+            error_msg = str(e)
+
+        # Fallback to Ollama if primary failed
+        if reply is None or (reply == FALLBACK_RESPONSES.get("error")):
+            logger.info("Falling back to Ollama...")
+            try:
+                reply = self._generate_ollama(prompt, conversation_history or [])
+                logger.info("Ollama fallback succeeded")
+            except Exception as ollama_error:
+                logger.error(f"Ollama fallback also failed: {ollama_error}")
+                reply = FALLBACK_RESPONSES.get("error")
 
         # Determine suggested time if applicable
         suggested_time = self._get_suggested_time(message_type)
@@ -268,6 +321,88 @@ class LLMService:
             logger.error(f"Anthropic generation error: {e}")
             return FALLBACK_RESPONSES.get("error")
 
+    def _generate_minimax(self, prompt: str, history: List[ChatMessage]) -> str:
+        """Generate response using MiniMax (or OpenRouter if key starts with sk-or-v1)."""
+        try:
+            # Check key directly - more reliable than instance variable
+            key_val = settings.minimax_api_key
+            key_prefix = key_val[:10] if key_val else "None"
+            logger.info(f"MINIMAX_DEBUG: key value = '{key_prefix}...', full key set = {key_val is not None}")
+
+            is_openrouter = key_val and key_val.startswith("sk-or-v1")
+            logger.info(f"MINIMAX_DEBUG: is_openrouter = {is_openrouter}, provider = {self.provider}")
+            logger.info(f"MINIMAX_DEBUG: client type = {type(self.client).__name__}")
+
+            if is_openrouter:
+                logger.info(f"OpenRouter: Using model {settings.openrouter_model}")
+                model = settings.openrouter_model
+
+                # Build conversation for OpenAI client
+                messages = []
+                if history:
+                    messages.extend([{"role": h.role, "content": h.content} for h in history])
+                messages.append({"role": "user", "content": prompt})
+
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+
+                logger.info(f"OpenRouter response received: {response.choices[0].message.content[:200]}...")
+
+                # OpenAI/OpenRouter response format
+                if response.choices and len(response.choices) > 0:
+                    return response.choices[0].message.content
+
+                logger.error(f"OpenRouter response invalid: {response}")
+                return FALLBACK_RESPONSES.get("error")
+            else:
+                # Use MiniMaxClient
+                logger.info(f"MiniMax: Using model {settings.minimax_model}")
+                model = settings.minimax_model
+
+                # Build conversation for MiniMax
+                messages = []
+                if history:
+                    messages.extend([{"role": h.role, "content": h.content} for h in history])
+                messages.append({"role": "user", "content": prompt})
+
+                response = self.client.send_message(
+                    model=model,
+                    messages=messages,
+                    stream=False
+                )
+
+                logger.info(f"MiniMax response received: {response}")
+
+                # MiniMax response format
+                if response.get("choices") and len(response["choices"]) > 0:
+                    return response["choices"][0]["message"]["content"]
+
+                logger.error(f"MiniMax response invalid: {response}")
+                return FALLBACK_RESPONSES.get("error")
+        except Exception as e:
+            logger.error(f"LLM generation error: {e}", exc_info=True)
+            return FALLBACK_RESPONSES.get("error")
+
+    def generate(self, prompt: str) -> str:
+        """
+        Generic generate method that works with any provider.
+        Used by repo evaluation service.
+        """
+        if self.provider == LLMProvider.OLLAMA:
+            return self._generate_ollama(prompt, [])
+        elif self.provider == LLMProvider.OPENAI:
+            return self._generate_openai(prompt, [])
+        elif self.provider == LLMProvider.ANTHROPIC:
+            return self._generate_anthropic(prompt, [])
+        elif self.provider == LLMProvider.MINIMAX:
+            return self._generate_minimax(prompt, [])
+        else:
+            return FALLBACK_RESPONSES.get("error")
+
     def _get_suggested_time(self, message_type: MessageType) -> Optional[int]:
         """Get suggested time in seconds based on message type."""
         time_map = {
@@ -299,6 +434,44 @@ class OllamaClient:
         """Send chat request to Ollama."""
         response = self.client.post(
             "/api/chat",
+            json={
+                "model": model,
+                "messages": messages,
+                "stream": stream
+            }
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+class MiniMaxClient:
+    """HTTP client for MiniMax API."""
+
+    BASE_URL = "https://api.minimax.chat/v1"
+
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            import httpx
+            self._client = httpx.Client(base_url=self.BASE_URL, timeout=120.0)
+        return self._client
+
+    def send_message(self, model: str, messages: List[Dict], stream: bool = False) -> Dict:
+        """Send chat request to MiniMax API."""
+        import json
+
+        # MiniMax requires specific format
+        response = self.client.post(
+            "/text/chatcompletion_v2",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            },
             json={
                 "model": model,
                 "messages": messages,
