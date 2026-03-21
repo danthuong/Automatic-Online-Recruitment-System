@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Timer } from '@/renderer/components/exam/Timer'
 import { QuestionNav } from '@/renderer/components/exam/QuestionNav'
@@ -7,7 +7,6 @@ import { MultipleChoice } from '@/renderer/components/questions/MultipleChoice'
 import { CodeEditor } from '@/renderer/components/questions/CodeEditor'
 import { EssayInput } from '@/renderer/components/questions/EssayInput'
 import { WarningBanner } from '@/renderer/components/proctoring/WarningBanner'
-import { AIOverlay } from '@/renderer/components/proctoring/AIOverlay'
 import { Button } from '@/renderer/components/ui/button'
 import { Badge } from '@/renderer/components/ui/badge'
 import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
@@ -24,21 +23,244 @@ import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
 import { cn } from '@/renderer/lib/utils'
 import { InputTracker } from '@/renderer/input-tracker'
 import { useTheme } from '@/renderer/hooks/useTheme'
-import { aiProctorService } from '@/renderer/services/ai-proctor-service'
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Flag, 
-  Send, 
-  AlertTriangle, 
-  ShieldX, 
-  Code2, 
-  Bot, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  Send,
+  AlertTriangle,
+  ShieldX,
+  Code2,
+  Bot,
   PanelRightClose,
   PanelRightOpen,
-  Eye,
-  Hand,
+  FileText,
+  Keyboard,
+  Lightbulb,
 } from 'lucide-react'
+
+// LeetCode-style question panel component
+function QuestionPanel({
+  question,
+  sections,
+}: {
+  question: any
+  sections: QuestionSections
+}) {
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      {/* Question Title Bar */}
+      <div className="bg-slate-900 px-6 py-4 border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className={cn(
+              question.difficulty === 'easy'
+                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                : question.difficulty === 'medium'
+                  ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                  : 'bg-red-500/20 text-red-400 border-red-500/30'
+            )}
+          >
+            {question.difficulty}
+          </Badge>
+          <h2 className="text-lg font-semibold text-white">{question.title}</h2>
+        </div>
+      </div>
+
+      {/* Question Content - LeetCode Style */}
+      <div className="p-6 space-y-6">
+        {/* Problem Description */}
+        {sections.problem && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Description
+            </h3>
+            <div className="prose prose-invert max-w-none">
+              <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-mono text-sm">
+                {sections.problem}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Examples */}
+        {question.examples && question.examples.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <Lightbulb className="w-4 h-4" />
+              Examples
+            </h3>
+            <div className="space-y-4">
+              {question.examples.map((example: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="bg-slate-900/50 rounded-lg p-4 border border-slate-800"
+                >
+                  <div className="space-y-2 font-mono text-sm">
+                    <div>
+                      <span className="text-slate-500">Input: </span>
+                      <span className="text-blue-400">{example.input}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Output: </span>
+                      <span className="text-green-400">{example.output}</span>
+                    </div>
+                    {example.explanation && (
+                      <div>
+                        <span className="text-slate-500">Explanation: </span>
+                        <span className="text-slate-400">{example.explanation}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Constraints */}
+        {question.constraints && question.constraints.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <Keyboard className="w-4 h-4" />
+              Constraints
+            </h3>
+            <ul className="list-disc list-inside space-y-1 font-mono text-sm">
+              {question.constraints.map((constraint: string, idx: number) => (
+                <li key={idx} className="text-slate-300">
+                  {constraint}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Input Format */}
+        {sections.input && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              Input Format
+            </h3>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
+              <p className="text-slate-200 font-mono text-sm whitespace-pre-wrap">
+                {sections.input}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Output Format */}
+        {sections.output && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              Output Format
+            </h3>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
+              <p className="text-slate-200 font-mono text-sm whitespace-pre-wrap">
+                {sections.output}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Note */}
+        {sections.note && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              Note
+            </h3>
+            <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
+              <p className="text-amber-200 text-sm whitespace-pre-wrap">{sections.note}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Parse formatted question sections from the API response
+interface QuestionSections {
+  problem: string
+  input: string
+  output: string
+  note?: string
+}
+
+function parseQuestionSections(fullText: string): QuestionSections {
+  const sections: QuestionSections = {
+    problem: '',
+    input: '',
+    output: '',
+  }
+
+  // Parse the formatted text with emoji markers
+  const problemMatch = fullText.match(/📝 \*\*Problem\*\*\s*([\s\S]*?)(?=\n📥|\n📤|\n📌|$)/)
+  const inputMatch = fullText.match(/📥 \*\*Input\*\*\s*([\s\S]*?)(?=\n📤|\n📌|$)/)
+  const outputMatch = fullText.match(/📤 \*\*Output\*\*\s*([\s\S]*?)(?=\n📌|$)/)
+  const noteMatch = fullText.match(/📌 \*\*Note\*\*\s*([\s\S]*?)$/)
+
+  if (problemMatch) sections.problem = problemMatch[1].trim()
+  if (inputMatch) sections.input = inputMatch[1].trim()
+  if (outputMatch) sections.output = outputMatch[1].trim()
+  if (noteMatch) sections.note = noteMatch[1].trim()
+
+  // If no emoji markers found, try to parse the raw text
+  if (!sections.problem && fullText) {
+    // Check if it contains the markers at all
+    if (!fullText.includes('📝') && !fullText.includes('📥')) {
+      // Try heuristic parsing
+      const lines = fullText.split('\n')
+      let currentSection = 'problem'
+      const sectionContents: string[] = []
+
+      for (const line of lines) {
+        const lowerLine = line.toLowerCase().trim()
+
+        if (lowerLine.includes('input:') || lowerLine.startsWith('input ')) {
+          if (sectionContents.length > 0 && currentSection === 'problem') {
+            sections.problem = sectionContents.join('\n').trim()
+          }
+          currentSection = 'input'
+          sectionContents.length = 0
+          const content = line.replace(/input:?\s*/i, '').trim()
+          if (content) sectionContents.push(content)
+        } else if (lowerLine.includes('output:') || lowerLine.startsWith('output ')) {
+          if (sectionContents.length > 0 && currentSection === 'input') {
+            sections.input = sectionContents.join('\n').trim()
+          }
+          currentSection = 'output'
+          sectionContents.length = 0
+          const content = line.replace(/output:?\s*/i, '').trim()
+          if (content) sectionContents.push(content)
+        } else {
+          sectionContents.push(line)
+        }
+      }
+
+      // Save last section
+      if (sectionContents.length > 0) {
+        if (currentSection === 'output') {
+          sections.output = sectionContents.join('\n').trim()
+        } else if (currentSection === 'problem' && !sections.problem) {
+          sections.problem = sectionContents.join('\n').trim()
+        }
+      }
+
+      // If still empty, use full text as problem
+      if (!sections.problem) {
+        sections.problem = fullText
+      }
+    } else {
+      // Just use the full text if it has some markers but we couldn't parse
+      sections.problem = fullText
+    }
+  }
+
+  return sections
+}
 
 const DEFAULT_LANGUAGE: Language = 'python'
 
@@ -71,9 +293,6 @@ export function ExamScreen() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false)
 
-  const videoRef0 = useRef<HTMLVideoElement>(null)
-  const videoRef1 = useRef<HTMLVideoElement>(null)
-
   const {
     questions,
     currentQuestionIndex,
@@ -95,11 +314,6 @@ export function ExamScreen() {
     showWarningDialog,
     dismissWarningDialog,
     lastStrikeReason,
-    aiProctorState,
-    aiStream0,
-    aiStream1,
-    setAIProctorState,
-    handleAIAlert,
   } = useExamStore()
 
   const { theme } = useTheme()
@@ -124,38 +338,6 @@ export function ExamScreen() {
       setShowDisqualifyDialog(false)
     }
   }, [status])
-
-  useEffect(() => {
-    if (videoRef0.current && aiStream0) {
-      videoRef0.current.srcObject = aiStream0
-      videoRef0.current.play().catch(console.error)
-    }
-    if (videoRef1.current && aiStream1) {
-      videoRef1.current.srcObject = aiStream1
-      videoRef1.current.play().catch(console.error)
-    }
-  }, [aiStream0, aiStream1])
-    // if (status === 'exam' && aiStream0 && aiStream1) {
-    //   if (videoRef0.current) videoRef0.current.srcObject = aiStream0
-    //   if (videoRef1.current) videoRef1.current.srcObject = aiStream1
-    //   if (videoRef0.current) videoRef0.current.play().catch(() => {})
-    //   if (videoRef1.current) videoRef1.current.play().catch(() => {})
-  useEffect(() => {
-    if (aiStream0 && aiStream1) {
-      aiProctorService.connect(
-        aiStream0,
-        aiStream1,
-        (state) => setAIProctorState(state),
-        (alert) => handleAIAlert(alert)
-      ).catch((err) => {
-        console.error('[ExamScreen] AI service connection failed:', err)
-      })
-
-      return () => {
-        aiProctorService.stop()
-      }
-    }
-  }, [status, aiStream0, aiStream1, setAIProctorState, handleAIAlert])
 
   useEffect(() => {
     if (showWarningDialog) {
@@ -301,6 +483,11 @@ export function ExamScreen() {
     handleSubmit()
   }
 
+  // Parse question sections for display
+  const questionSections = currentQuestion
+    ? parseQuestionSections(currentQuestion.question)
+    : null
+
   const renderQuestion = () => {
     if (!currentQuestion) return null
 
@@ -317,16 +504,24 @@ export function ExamScreen() {
       case 'code':
         const starterCode = getStarterCode(currentQuestion, selectedLanguage)
         return (
-          <CodeEditor
-            question={currentQuestion.question}
-            language={selectedLanguage}
-            starterCode={starterCode}
-            allowedLanguages={currentQuestion.allowedLanguages}
-            value={currentAnswer}
-            onChange={handleAnswer}
-            onLanguageChange={setSelectedLanguage}
-            onReset={() => handleAnswer(starterCode)}
-          />
+          <div className="space-y-4">
+            {/* LeetCode-style Question Panel */}
+            <QuestionPanel
+              question={currentQuestion}
+              sections={questionSections || { problem: currentQuestion.question, input: '', output: '' }}
+            />
+            {/* Code Editor */}
+            <CodeEditor
+              question={currentQuestion.question}
+              language={selectedLanguage}
+              starterCode={starterCode}
+              allowedLanguages={currentQuestion.allowedLanguages}
+              value={currentAnswer}
+              onChange={handleAnswer}
+              onLanguageChange={setSelectedLanguage}
+              onReset={() => handleAnswer(starterCode)}
+            />
+          </div>
         )
       case 'essay':
         return (
@@ -513,64 +708,11 @@ export function ExamScreen() {
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar */}
         <aside className={cn(
-          "w-80 border-r p-4 space-y-4 overflow-y-auto",
+          "w-72 border-r p-4 space-y-4 overflow-y-auto",
           theme === 'dark' 
             ? 'bg-card/30 border-border backdrop-blur-sm' 
             : 'bg-white border-slate-200'
         )}>
-          {/* AI Camera Preview */}
-          <div className="space-y-2">
-            <h3 className={cn(
-              "text-sm font-medium",
-              theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
-            )}>
-              AI Cameras
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
-                <video
-                  ref={videoRef0}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover transform scale-x-[-1]"
-                />
-                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  Face
-                </div>
-                {aiProctorState && (
-                  <div className={cn(
-                    'absolute top-1 right-1 w-2 h-2 rounded-full',
-                    aiProctorState.faceCount === 1 ? 'bg-green-500 animate-pulse' :
-                    aiProctorState.faceCount === 0 ? 'bg-red-500' : 'bg-red-500 animate-pulse'
-                  )} />
-                )}
-              </div>
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900">
-                <video
-                  ref={videoRef1}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{transform: 'rotate(90deg) scale(1.8)'}}
-                  className="w-full h-full object-cover transform scale-x-[-1]"
-                />
-                <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-[10px] flex items-center gap-1">
-                  <Hand className="w-3 h-3" />
-                  Hand
-                </div>
-                {aiProctorState && (
-                  <div className={cn(
-                    'absolute top-1 right-1 w-2 h-2 rounded-full',
-                    aiProctorState.handsDetected > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'
-                  )} />
-                )}
-              </div>
-            </div>
-            {aiProctorState && <AIOverlay state={aiProctorState} />}
-          </div>
-
           {/* Question Navigator */}
           <div className="space-y-2">
             <h3 className={cn(

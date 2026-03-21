@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-Question Coding Interview</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1a1a1a;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .question {
+            display: none;
+        }
+        .question.active {
+            display: block;
+        }
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .question-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .question-type {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .difficulty {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .difficulty.easy {
+            background: #d4edda;
+            color: #155724;
+        }
+        .difficulty.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .difficulty.hard {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .code-editor {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            resize: vertical;
+        }
+        .test-cases {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+        .test-case {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        .test-case-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 12px;
+            min-height: 60px;
+        }
+        .result {
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 12px;
+        }
+        .result.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .result.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .progress {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .hidden {
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .final-results {
+            text-align: center;
+        }
+        .score {
+            font-size: 48px;
+            font-weight: 700;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        .score-breakdown {
+            text-align: left;
+            margin-top: 20px;
+        }
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>5-Question Coding Interview</h1>
+
+        <!-- Registration Form -->
+        <div id="registration-section" class="section">
+            <h2>Candidate Information</h2>
+            <div class="form-group">
+                <label for="candidateName">Your Name</label>
+                <input type="text" id="candidateName" placeholder="Enter your name">
+            </div>
+            <div class="form-group">
+                <label for="githubUsername">GitHub Username (optional)</label>
+                <input type="text" id="githubUsername" placeholder="e.g., torvalds">
+            </div>
+            <div class="form-group">
+                <label for="jobDescription">Job Description (optional)</label>
+                <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+            </div>
+            <button class="btn" onclick="startInterview()">Start Interview</button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading-section" class="section hidden">
+            <div class="loading">
+                <div class="spinner"></div>
+                Generating interview questions...
+            </div>
+        </div>
+
+        <!-- Questions Container -->
+        <div id="questions-section" class="hidden">
+            <div class="progress">
+                Question <span id="currentQ">1</span> of 5
+            </div>
+
+            <!-- Q1-Q3: Code Questions -->
+            <div id="question-1" class="question section">
+                <div class="question-header">
+                    <div>
+                        <span class="question-title">Question 1</span>
+                        <span class="difficulty easy">EASY</span>
+                    </div>
+                    <span class="question-type">Coding</span>
+                </div>
+                <div id="q1-content"></div>
+                <div class="test-cases" id="q1-test-cases"></div>
+                <textarea class="code-editor" id="q1-code" placeholder="Write your Python solution here..."></textarea>
+                <button class="btn" onclick="runCode(1)">Run Code</button>
+                <div id="q1-output" class="output hidden"></div>
+                <div id="q1-result" class="result hidden"></div>
+                <div class="navigation">
+                    <div></div>
+                    <button class="btn btn-secondary" onclick="nextQuestion(1)">Next</button>
+                </div>
+            </div>
+
+            <div id="question-2" class="question section">
+                <div class="question-header">
+                    <div>
+                        <span class="question-title">Question 2</span>
+                        <span class="difficulty medium">MEDIUM</span>
+                    </div>
+                    <span class="question-type">Coding</span>
+                </div>
+                <div id="q2-content"></div>
+                <div class="test-cases" id="q2-test-cases"></div>
+                <textarea class="code-editor" id="q2-code" placeholder="Write your Python solution here..."></textarea>
+                <button class="btn" onclick="runCode(2)">Run Code</button>
+                <div id="q2-output" class="output hidden"></div>
+                <div id="q2-result" class="result hidden"></div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevQuestion(2)">Previous</button>
+                    <button class="btn btn-secondary" onclick="nextQuestion(2)">Next</button>
+                </div>
+            </div>
+
+            <div id="question-3" class="question section">
+                <div class="question-header">
+                    <div>
+                        <span class="question-title">Question 3</span>
+                        <span class="difficulty medium">MEDIUM</span>
+                    </div>
+                    <span class="question-type">Coding</span>
+                </div>
+                <div id="q3-content"></div>
+                <div class="test-cases" id="q3-test-cases"></div>
+                <textarea class="code-editor" id="q3-code" placeholder="Write your Python solution here..."></textarea>
+                <button class="btn" onclick="runCode(3)">Run Code</button>
+                <div id="q3-output" class="output hidden"></div>
+                <div id="q3-result" class="result hidden"></div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevQuestion(3)">Previous</button>
+                    <button class="btn btn-secondary" onclick="nextQuestion(3)">Next</button>
+                </div>
+            </div>
+
+            <!-- Q4: GitHub Question -->
+            <div id="question-4" class="question section">
+                <div class="question-header">
+                    <div>
+                        <span class="question-title">Question 4</span>
+                    </div>
+                    <span class="question-type">GitHub Project</span>
+                </div>
+                <div id="q4-content"></div>
+                <textarea id="q4-answer" placeholder="Write your answer here..."></textarea>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevQuestion(4)">Previous</button>
+                    <button class="btn btn-secondary" onclick="nextQuestion(4)">Next</button>
+                </div>
+            </div>
+
+            <!-- Q5: JD Question -->
+            <div id="question-5" class="question section">
+                <div class="question-header">
+                    <div>
+                        <span class="question-title">Question 5</span>
+                    </div>
+                    <span class="question-type">Situational</span>
+                </div>
+                <div id="q5-content"></div>
+                <textarea id="q5-answer" placeholder="Write your answer here..."></textarea>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevQuestion(5)">Previous</button>
+                    <button class="btn" onclick="submitInterview()">Submit Interview</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-section" class="section hidden">
+            <div class="final-results">
+                <h2>Interview Complete!</h2>
+                <div class="score">Calculating...</div>
+                <div class="score-breakdown" id="score-breakdown"></div>
+                <button class="btn" onclick="location.reload()">Start New Interview</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let interviewData = null;
+        let results = {};
+
+        async function startInterview() {
+            const name = document.getElementById('candidateName').value.trim();
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+
+            const githubUsername = document.getElementById('githubUsername').value.trim();
+            const jobDescription = document.getElementById('jobDescription').value.trim();
+
+            document.getElementById('registration-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.remove('hidden');
+
+            try {
+                // First, fetch GitHub profile if provided
+                let githubData = null;
+                if (githubUsername) {
+                    try {
+                        const githubRes = await fetch('/api/github/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: githubUsername, max_repos: 10 })
+                        });
+                        if (githubRes.ok) {
+                            const githubJson = await githubRes.json();
+                            githubData = {
+                                username: githubJson.profile.username,
+                                repositories: githubJson.profile.repositories.map(r => ({
+                                    name: r.name,
+                                    description: r.description,
+                                    stars: r.stars,
+                                    language: r.language
+                                })),
+                                bio: githubJson.profile.bio,
+                                name: githubJson.profile.name
+                            };
+                        }
+                    } catch (e) {
+                        console.error('GitHub fetch error:', e);
+                    }
+                }
+
+                // Generate interview
+                const res = await fetch('/api/interview/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidate_name: name,
+                        github_profile_data: githubData,
+                        job_description: jobDescription
+                    })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to generate interview');
+                }
+
+                interviewData = await res.json();
+                renderQuestions();
+
+                document.getElementById('loading-section').classList.add('hidden');
+                document.getElementById('questions-section').classList.remove('hidden');
+                showQuestion(1);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('registration-section').classList.remove('hidden');
+                document.getElementById('loading-section').classList.add('hidden');
+            }
+        }
+
+        function renderQuestions() {
+            interviewData.questions.forEach((q, idx) => {
+                const qNum = idx + 1;
+                const contentEl = document.getElementById(`q${qNum}-content`);
+
+                if (q.type === 'code') {
+                    contentEl.innerHTML = `
+                        <h3>${q.title}</h3>
+                        <p style="margin-top: 12px; white-space: pre-wrap;">${q.description}</p>
+                    `;
+
+                    // Show test cases
+                    const testCasesEl = document.getElementById(`q${qNum}-test-cases`);
+                    if (q.test_cases && q.test_cases.length > 0) {
+                        testCasesEl.innerHTML = '<strong>Test Cases:</strong><br>' +
+                            q.test_cases.map((tc, i) => `
+                                <div class="test-case">
+                                    <span class="test-case-label">Input ${i+1}:</span> ${tc.input.substring(0, 100)}${tc.input.length > 100 ? '...' : ''}
+                                </div>
+                            `).join('');
+                    }
+
+                    // Update difficulty badge
+                    const difficultyEl = document.querySelector(`#question-${qNum} .difficulty`);
+                    if (difficultyEl) {
+                        difficultyEl.textContent = q.difficulty.toUpperCase();
+                        difficultyEl.className = `difficulty ${q.difficulty}`;
+                    }
+                } else {
+                    contentEl.innerHTML = `
+                        <h3>${q.title}</h3>
+                        <p style="margin-top: 12px;">${q.description}</p>
+                    `;
+                }
+            });
+        }
+
+        function showQuestion(num) {
+            document.querySelectorAll('.question').forEach(q => q.classList.remove('active'));
+            document.getElementById(`question-${num}`).classList.add('active');
+            document.getElementById('currentQ').textContent = num;
+        }
+
+        function nextQuestion(current) {
+            if (current < 5) {
+                showQuestion(current + 1);
+            }
+        }
+
+        function prevQuestion(current) {
+            if (current > 1) {
+                showQuestion(current - 1);
+            }
+        }
+
+        async function runCode(qNum) {
+            const code = document.getElementById(`q${qNum}-code`).value;
+            const outputEl = document.getElementById(`q${qNum}-output`);
+            const resultEl = document.getElementById(`q${qNum}-result`);
+
+            outputEl.classList.remove('hidden');
+            outputEl.textContent = 'Running...';
+            resultEl.classList.add('hidden');
+
+            const question = interviewData.questions[qNum - 1];
+
+            try {
+                const res = await fetch('/api/interview/execute_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_code: code,
+                        problem_id: question.id
+                    })
+                });
+
+                const result = await res.json();
+
+                results[`q${qNum}`] = result;
+
+                outputEl.textContent = result.test_results.map(tr =>
+                    `Test ${tr.test_case}: ${tr.passed ? 'PASS' : 'FAIL'}\nInput: ${tr.input.substring(0, 50)}...\nExpected: ${tr.expected.substring(0, 50)}...\nActual: ${tr.actual.substring(0, 50)}...`
+                ).join('\n\n');
+
+                resultEl.classList.remove('hidden');
+                resultEl.className = `result ${result.pass_percentage > 0 ? 'pass' : 'fail'}`;
+                resultEl.textContent = `${result.pass_percentage}% tests passed${result.complexity ? ` | Complexity: ${result.complexity}` : ''}`;
+
+            } catch (error) {
+                outputEl.textContent = 'Error: ' + error.message;
+                resultEl.classList.remove('hidden');
+                resultEl.className = 'result fail';
+                resultEl.textContent = 'Execution failed';
+            }
+        }
+
+        async function submitInterview() {
+            // Evaluate Q4 and Q5
+            const q4Answer = document.getElementById('q4-answer').value;
+            const q5Answer = document.getElementById('q5-answer').value;
+
+            document.getElementById('questions-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.remove('hidden');
+            document.getElementById('loading-section').querySelector('.loading').innerHTML =
+                '<div class="spinner"></div>Evaluating your answers...';
+
+            try {
+                // Evaluate Q4
+                let q4Result = { score: 5, feedback: 'Answer received' };
+                if (q4Answer.trim()) {
+                    const q4Res = await fetch('/api/interview/evaluate_writing', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question_text: interviewData.questions[3].description,
+                            user_answer: q4Answer
+                        })
+                    });
+                    if (q4Res.ok) {
+                        q4Result = await q4Res.json();
+                    }
+                }
+                results.q4 = q4Result;
+
+                // Evaluate Q5
+                let q5Result = { score: 5, feedback: 'Answer received' };
+                if (q5Answer.trim()) {
+                    const q5Res = await fetch('/api/interview/evaluate_writing', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question_text: interviewData.questions[4].description,
+                            user_answer: q5Answer
+                        })
+                    });
+                    if (q5Res.ok) {
+                        q5Result = await q5Res.json();
+                    }
+                }
+                results.q5 = q5Result;
+
+                // Calculate total score
+                displayResults();
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('loading-section').classList.add('hidden');
+                document.getElementById('questions-section').classList.remove('hidden');
+            }
+        }
+
+        function displayResults() {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('results-section').classList.remove('hidden');
+
+            // Calculate scores
+            const codeScores = [];
+            if (results.q1) codeScores.push(results.q1.pass_percentage);
+            if (results.q2) codeScores.push(results.q2.pass_percentage);
+            if (results.q3) codeScores.push(results.q3.pass_percentage);
+
+            const avgCodeScore = codeScores.length > 0
+                ? codeScores.reduce((a, b) => a + b, 0) / codeScores.length
+                : 0;
+
+            const q4Score = results.q4 ? results.q4.score * 10 : 0; // Convert 1-10 to 0-100
+            const q5Score = results.q5 ? results.q5.score * 10 : 0;
+
+            const totalScore = Math.round((avgCodeScore * 0.6 + q4Score * 0.2 + q5Score * 0.2));
+
+            // Update score display
+            const scoreEl = document.querySelector('.score');
+            scoreEl.textContent = `${totalScore}/100`;
+
+            // Build breakdown
+            const breakdown = document.getElementById('score-breakdown');
+            breakdown.innerHTML = `
+                <div class="score-item">
+                    <span>Q1 (Code - Easy)</span>
+                    <span>${results.q1 ? results.q1.pass_percentage + '%' : 'Not attempted'}</span>
+                </div>
+                <div class="score-item">
+                    <span>Q2 (Code - Medium)</span>
+                    <span>${results.q2 ? results.q2.pass_percentage + '%' : 'Not attempted'}</span>
+                </div>
+                <div class="score-item">
+                    <span>Q3 (Code - Medium)</span>
+                    <span>${results.q3 ? results.q3.pass_percentage + '%' : 'Not attempted'}</span>
+                </div>
+                <div class="score-item">
+                    <span>Q4 (GitHub Project)</span>
+                    <span>${results.q4 ? results.q4.score + '/10' : 'Not attempted'}</span>
+                </div>
+                <div class="score-item">
+                    <span>Q5 (Situational)</span>
+                    <span>${results.q5 ? results.q5.score + '/10' : 'Not attempted'}</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
