@@ -10,12 +10,6 @@ app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
-app.on('session-created', (session) => {
-  session.setCertificateVerifyProc((_req, callback) => {
-    callback(0)
-  })
-})
-
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
 let mainWindow: BrowserWindow | null = null
@@ -773,6 +767,11 @@ ipcMain.handle(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION, async () => {
 })
 
 app.whenReady().then(() => {
+  const { session } = require('electron')
+  session.defaultSession.setCertificateVerifyProc((_req: any, callback: (result: number) => void) => {
+    callback(0)
+  })
+
   if (!checkAdminPrivileges()) {
     console.warn('[App] Warning: Running without administrator privileges')
     console.warn('[App] Some security features may not work correctly')
