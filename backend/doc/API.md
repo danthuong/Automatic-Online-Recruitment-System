@@ -1,7 +1,7 @@
 # Backend API Documentation
 
 **Automatic Online Recruitment System**  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Base URL:** `http://localhost:5000/api/v1`
 
 ---
@@ -18,6 +18,8 @@
   - [Applications](#applications)
   - [Questions](#questions)
   - [Tests](#tests)
+  - [Upload](#upload)
+  - [Files](#files)
 - [Data Models](#data-models)
 - [Error Handling](#error-handling)
 - [Setup & Running](#setup--running)
@@ -43,12 +45,12 @@ backend/src/
 ├── config/
 │   └── database.ts    # MongoDB connection
 ├── controllers/       # HTTP request handlers
-├── middleware/        # Auth, validation, error handling
+├── middleware/       # Auth, validation, error handling
 ├── models/           # Mongoose schemas
 ├── routes/           # Route definitions
-├── services/        # Business logic
-├── types/           # TypeScript type definitions
-└── utils/           # Helpers (errors, ApiResponse)
+├── services/         # Business logic
+├── types/            # TypeScript type definitions
+└── utils/            # Helpers (errors, ApiResponse)
 ```
 
 ---
@@ -105,6 +107,9 @@ Register a new user. If role is `candidate`, a Candidate profile is auto-created
 | `role` | enum | No | `admin`, `hr`, `candidate` (default: `candidate`) |
 | `firstName` | string | Yes | 1-50 characters |
 | `lastName` | string | Yes | 1-50 characters |
+| `githubUrl` | string | Candidate only | GitHub username or URL |
+| `cvFileId` | string | Candidate only | Uploaded CV file ID |
+| `faceImageFileId` | string | Candidate only | Face image file ID for identity verification |
 
 **Response (201):**
 
@@ -269,7 +274,7 @@ List all users (paginated). **Admin and HR only.**
 
 #### `GET /users/me`
 
-Get the authenticated user's own profile.
+Get the authenticated user's own profile. Alias for `GET /auth/me`.
 
 **Headers:** `Authorization: Bearer <access_token>`
 
@@ -277,7 +282,7 @@ Get the authenticated user's own profile.
 
 #### `GET /users/me/candidate-profile`
 
-Get the authenticated user's candidate profile (if role is candidate).
+Get the authenticated user's candidate profile (if role is `candidate`).
 
 **Headers:** `Authorization: Bearer <access_token>`
 
@@ -313,6 +318,22 @@ Get the authenticated user's candidate profile (if role is candidate).
 
 ---
 
+#### `GET /users/:id`
+
+Get a single user by ID. **Admin and HR only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+---
+
+#### `GET /users/:id/candidate-profile`
+
+Get a user's candidate profile. **Admin and HR only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+---
+
 #### `PATCH /users/:id`
 
 Update a user's profile. Users can update themselves; only admins can update other users.
@@ -328,7 +349,10 @@ Update a user's profile. Users can update themselves; only admins can update oth
   "phone": "+84...",
   "githubUrl": "https://github.com/janesmith",
   "skills": ["Python", "Django"],
-  "experience": 5
+  "experience": 5,
+  "education": "MIT",
+  "linkedInUrl": "https://linkedin.com/in/...",
+  "portfolioUrl": "https://..."
 }
 ```
 
@@ -392,11 +416,15 @@ Get a single company by ID (public).
 
 Update company details. **HR and Admin only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
 ---
 
 #### `PATCH /companies/:id/verify`
 
 Verify a company. **Admin only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 ---
 
@@ -407,6 +435,8 @@ Verify a company. **Admin only.**
 Create a new job posting. **HR and Admin only.**
 
 **Headers:** `Authorization: Bearer <access_token>`
+
+> If `companyId` is not provided, it defaults to the HR user's associated company.
 
 **Request Body:**
 
@@ -441,13 +471,15 @@ Create a new job posting. **HR and Admin only.**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `companyId` | string | Yes | Company ID |
+| `companyId` | string | No | Defaults to HR's company |
 | `title` | string | Yes | Job title |
 | `description` | string | Yes | Full job description |
 | `requiredSkills` | string[] | No | Required skills |
 | `experienceLevel` | enum | No | `intern`, `junior`, `mid`, `senior`, `lead`, `manager` |
 | `jobType` | enum | No | `full-time`, `part-time`, `contract`, `internship` |
 | `testConfig.totalTime` | number | No | Time limit in minutes (default: 60) |
+
+**Response (201):** Returns the created job object with nested `company` details.
 
 ---
 
@@ -463,6 +495,7 @@ List all jobs (paginated, public).
 | `limit` | number | Items per page |
 | `status` | enum | `draft`, `active`, `paused`, `closed` |
 | `companyId` | string | Filter by company |
+| `hrId` | string | Filter by posting HR |
 | `search` | string | Full-text search |
 | `requiredSkills` | string | Comma-separated skills |
 | `experienceLevel` | enum | Experience level |
@@ -471,9 +504,27 @@ List all jobs (paginated, public).
 
 ---
 
+#### `GET /jobs/my-jobs`
+
+List all jobs posted by the authenticated HR user. **HR and Admin only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Query Parameters:** Same as `GET /jobs` plus `search`.
+
+---
+
+#### `GET /jobs/company/:companyId`
+
+List all jobs for a specific company (paginated, public).
+
+**Query Parameters:** Same as `GET /jobs`.
+
+---
+
 #### `GET /jobs/:id`
 
-Get a single job with company details (public).
+Get a single job with nested `company` details (public).
 
 ---
 
@@ -481,17 +532,27 @@ Get a single job with company details (public).
 
 Update a job. Only the HR who created it or admins.
 
+**Headers:** `Authorization: Bearer <access_token>`
+
+> A job must have `title`, `description`, and at least one `requiredSkill` before it can be set to `active`.
+
 ---
 
 #### `PATCH /jobs/:id/status`
 
 Update job status. **HR and Admin only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request Body:**
+
 ```json
 {
   "status": "active"
 }
 ```
+
+Valid statuses: `draft`, `active`, `paused`, `closed`.
 
 ---
 
@@ -513,13 +574,25 @@ Apply to a job. **Candidate only.**
 
 > Cannot apply to the same job twice. Job must be `active`.
 
+**Response (201):** Returns the created application with nested `candidate` and `job` details.
+
 ---
 
 #### `GET /applications/my-applications`
 
 Get all applications for the authenticated candidate. **Candidate only.**
 
-**Query Parameters:** `page`, `limit`, `status`
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `page` | number | Page number |
+| `limit` | number | Items per page (max 100) |
+| `status` | enum | Filter by application status |
+
+**Response (200):** Returns paginated applications with nested `job` details.
 
 ---
 
@@ -527,17 +600,86 @@ Get all applications for the authenticated candidate. **Candidate only.**
 
 Get all applications for a specific job. **HR and Admin only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Query Parameters:** `page`, `limit`, `status`
+
+**Response (200):** Returns paginated applications with nested `candidate` details.
+
 ---
 
 #### `GET /applications/:id`
 
-Get a single application with candidate and job details.
+Get a single application with nested `candidate` and `job` details.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "candidateId": "...",
+    "candidate": {
+      "id": "...",
+      "userId": "...",
+      "user": {
+        "id": "...",
+        "email": "...",
+        "role": "candidate",
+        "firstName": "John",
+        "lastName": "Doe",
+        "isActive": true,
+        "createdAt": "..."
+      },
+      "phone": "+84...",
+      "resumeUrl": "https://...",
+      "githubUrl": "https://github.com/...",
+      "faceImageUrl": "https://...",
+      "cvUrl": "https://...",
+      "parsedCvData": { "..." },
+      "skills": ["React", "TypeScript"],
+      "experience": 3,
+      "education": "FPT University",
+      "wowScore": 85
+    },
+    "jobId": "...",
+    "job": { /* nested job with company */ },
+    "status": "pending",
+    "cvScore": 85,
+    "screeningFeedback": "Strong candidate",
+    "screeningDetails": {
+      "skillMatchScore": 90,
+      "experienceMatchScore": 80,
+      "overallScore": 85,
+      "skillGaps": ["Testing"],
+      "strengths": ["React", "TypeScript"],
+      "llmFeedback": "Excellent candidate",
+      "githubAnalysis": {
+        "repos": 15,
+        "stars": 120,
+        "mainLanguages": ["TypeScript", "Python"],
+        "activity": "active"
+      }
+    },
+    "hrNotes": "Good technical skills",
+    "hrDecision": "pending",
+    "appliedAt": "2026-03-21T00:00:00.000Z",
+    "screenedAt": "2026-03-21T00:00:00.000Z",
+    "createdAt": "2026-03-21T00:00:00.000Z"
+  }
+}
+```
 
 ---
 
 #### `PATCH /applications/:id/status`
 
 Update application status. **HR and Admin only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request Body:**
 
@@ -546,6 +688,14 @@ Update application status. **HR and Admin only.**
   "status": "screening_passed",
   "cvScore": 85,
   "screeningFeedback": "Strong candidate",
+  "screeningDetails": {
+    "skillMatchScore": 90,
+    "experienceMatchScore": 80,
+    "overallScore": 85,
+    "skillGaps": ["Testing"],
+    "strengths": ["React", "TypeScript"],
+    "llmFeedback": "Excellent candidate for frontend role"
+  },
   "hrNotes": "Good technical skills"
 }
 ```
@@ -561,24 +711,29 @@ pending → screening → screening_passed / screening_failed
 
 #### `POST /applications/:id/screen`
 
-Submit AI screening results. **HR and Admin only.**
+Submit a screening decision for an application. **HR and Admin only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request Body:**
 
 ```json
 {
+  "decision": "pass",
   "cvScore": 85,
   "screeningFeedback": "Strong candidate with relevant skills",
-  "screeningDetails": {
-    "skillMatchScore": 90,
-    "experienceMatchScore": 80,
-    "overallScore": 85,
-    "skillGaps": ["Testing", "GraphQL"],
-    "strengths": ["React", "TypeScript"],
-    "llmFeedback": "Excellent candidate for frontend role"
-  }
+  "hrNotes": "Proceed to interview scheduling"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `decision` | enum | Yes | `pass` or `fail` |
+| `cvScore` | number | No | CV score 0-100 |
+| `screeningFeedback` | string | No | Human-readable feedback |
+| `hrNotes` | string | No | Internal HR notes |
+
+> Sets status to `screening_passed` if `decision: "pass"`, or `screening_failed` if `decision: "fail"`. Also sets `screenedAt`.
 
 ---
 
@@ -586,7 +741,9 @@ Submit AI screening results. **HR and Admin only.**
 
 #### `POST /questions`
 
-Create a single question. **HR and Admin only.**
+Create a single question. **Admin and HR only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request Body:**
 
@@ -636,6 +793,8 @@ Create a single question. **HR and Admin only.**
 
 Create multiple questions at once.
 
+**Headers:** `Authorization: Bearer <access_token>`
+
 **Request Body:**
 
 ```json
@@ -650,6 +809,8 @@ Create multiple questions at once.
 
 Get questions by their IDs. Returns questions **with correct answers** for grading.
 
+**Headers:** `Authorization: Bearer <access_token>`
+
 **Query Parameters:** `ids` (comma-separated ObjectIds)
 
 ---
@@ -657,6 +818,8 @@ Get questions by their IDs. Returns questions **with correct answers** for gradi
 #### `GET /questions/by-tags`
 
 Get questions filtered by tags. Returns questions **without correct answers**.
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Query Parameters:**
 
@@ -681,6 +844,8 @@ Get questions for a specific test. Returns questions **without correct answers**
 
 Create a test for a candidate. **HR and Admin only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
 **Request Body:**
 
 ```json
@@ -695,18 +860,20 @@ Create a test for a candidate. **HR and Admin only.**
 }
 ```
 
+> A test is automatically generated with status `ready` and a unique `testId` (format: `TEST-XXXXXXXX`).
+
 **Response (201):**
 
 ```json
 {
   "success": true,
+  "message": "Test created successfully",
   "data": {
     "id": "...",
     "testId": "TEST-ABC12345",
     "applicationId": "...",
     "candidateId": "...",
     "jobId": "...",
-    "questionIds": ["...", "..."],
     "totalTime": 90,
     "status": "ready",
     "scheduledAt": "2026-03-25T09:00:00.000Z",
@@ -718,9 +885,17 @@ Create a test for a candidate. **HR and Admin only.**
 
 ---
 
+#### `GET /tests/:id`
+
+Get a test by its MongoDB ObjectId.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+---
+
 #### `GET /tests/testId/:testId`
 
-Get a test with its questions. Used by Electron client at test start.  
+Get a test with its questions by human-readable test ID. Used by Electron client at test start.  
 Returns questions **without correct answers**.
 
 **Response (200):**
@@ -729,7 +904,17 @@ Returns questions **without correct answers**.
 {
   "success": true,
   "data": {
-    "test": { /* test object */ },
+    "test": {
+      "id": "...",
+      "testId": "TEST-ABC12345",
+      "applicationId": "...",
+      "candidateId": "...",
+      "jobId": "...",
+      "totalTime": 90,
+      "status": "ready",
+      "scheduledAt": "...",
+      "language": "python"
+    },
     "questions": [
       {
         "id": "...",
@@ -753,17 +938,37 @@ Returns questions **without correct answers**.
 
 Get all tests for the authenticated candidate. **Candidate only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Response (200):** Returns array of test objects.
+
+---
+
+#### `GET /tests/application/:applicationId`
+
+Get the test associated with a specific application.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Response (200):** Returns the test or `404` if no test exists for this application.
+
 ---
 
 #### `POST /tests/:testId/start`
 
 Candidate starts a test. **Candidate only.**
 
+**Headers:** `Authorization: Bearer <access_token>`
+
+> Verifies the test belongs to the candidate. Sets `status` to `in_progress` and `startedAt` to now.
+
 ---
 
 #### `POST /tests/:testId/submit`
 
 Submit test answers. **Candidate only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
 
 **Request Body:**
 
@@ -789,6 +994,73 @@ Submit test answers. **Candidate only.**
 }
 ```
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `answers` | array | Yes | Array of answer objects |
+| `answers[].questionId` | string | Yes | Question ObjectId |
+| `answers[].answer` | string | Yes | Candidate's answer |
+| `answers[].language` | string | No | Programming language |
+| `answers[].flagged` | boolean | No | Marked for review |
+| `answers[].timeSpent` | number | No | Seconds spent |
+| `proctoringLogs` | array | No | Anti-cheat violation logs |
+| `focusLossCount` | number | No | Number of focus loss events |
+
+---
+
+### Upload
+
+#### `POST /upload/cv`
+
+Upload a CV/resume file for a candidate. **Authenticated users only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request:** `multipart/form-data` with field `file`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | PDF, DOC, or DOCX (max 12MB) |
+
+**Response (201):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "...",
+    "filename": "resume.pdf",
+    "contentType": "application/pdf",
+    "size": 245000
+  }
+}
+```
+
+---
+
+#### `POST /upload/face-image`
+
+Upload a face photo for identity verification. **Authenticated users only.**
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request:** `multipart/form-data` with field `file`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | JPG, PNG, or WebP (max 12MB) |
+
+**Response (201):** Same format as `POST /upload/cv`.
+
+---
+
+### Files
+
+#### `GET /files/:id`
+
+Serve a previously uploaded file by its ID. Returns the raw file.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
 ---
 
 ## Data Models
@@ -805,6 +1077,7 @@ Submit test answers. **Candidate only.**
 | `lastName` | string | Last name |
 | `isActive` | boolean | Account active status |
 | `companyId` | ObjectId | Reference to Company (for HR) |
+| `refreshTokenHash` | string | Hashed refresh token |
 | `createdAt` | Date | Creation timestamp |
 | `updatedAt` | Date | Last update timestamp |
 
@@ -824,6 +1097,8 @@ Submit test answers. **Candidate only.**
 | `experience` | number | Years of experience |
 | `education` | string | Education background |
 | `wowScore` | number | CV screening score (0-100) |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
 
 ### Company
 
@@ -835,10 +1110,13 @@ Submit test answers. **Candidate only.**
 | `website` | string | Company website URL |
 | `logoUrl` | string | Company logo URL |
 | `industry` | string | Industry category |
-| `size` | string | Company size (e.g., "11-50") |
+| `size` | string | Company size (e.g., "201-500") |
 | `location` | string | Headquarters location |
+| `foundedYear` | number | Year founded |
 | `isVerified` | boolean | Verification status |
 | `createdBy` | ObjectId | Creator user ID |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
 
 ### Job
 
@@ -849,32 +1127,46 @@ Submit test answers. **Candidate only.**
 | `companyId` | ObjectId | Reference to Company |
 | `title` | string | Job title |
 | `description` | string | Full job description |
+| `summary` | string | Short summary for job cards |
 | `requiredSkills` | string[] | Required skills |
 | `preferredSkills` | string[] | Nice-to-have skills |
-| `experienceLevel` | enum | Experience level |
-| `jobType` | enum | Employment type |
+| `experienceLevel` | enum | `intern`, `junior`, `mid`, `senior`, `lead`, `manager` |
+| `jobType` | enum | `full-time`, `part-time`, `contract`, `internship` |
 | `salary` | object | `{ min, max, currency, isNegotiable }` |
 | `location` | string | Job location |
 | `remote` | boolean | Remote work allowed |
-| `hiringCount` | number | Number of positions |
-| `applicationCount` | number | Denormalized count |
+| `hiringCount` | number | Number of open positions |
+| `applicationCount` | number | Denormalized application count |
 | `status` | enum | `draft`, `active`, `paused`, `closed` |
-| `testConfig` | object | Test settings |
+| `expiresAt` | Date | Job expiration date |
+| `testConfig` | object | `{ totalTime, codeQuestionCount, essayQuestionCount, mcqQuestionCount, passingScore }` |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
 
 ### Application
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `_id` | ObjectId | Unique identifier |
-| `candidateId` | ObjectId | Reference to User |
+| `candidateId` | ObjectId | Reference to User (candidate) |
 | `jobId` | ObjectId | Reference to Job |
 | `status` | enum | Application status |
-| `cvScore` | number | AI screening score |
-| `screeningFeedback` | string | AI feedback |
-| `screeningDetails` | object | Detailed LLM analysis |
+| `cvScore` | number | AI screening score (0-100) |
+| `screeningFeedback` | string | Human-readable feedback |
+| `screeningDetails` | object | LLM analysis results |
 | `appliedAt` | Date | Application timestamp |
+| `screenedAt` | Date | Screening completion timestamp |
 | `hrNotes` | string | HR manual notes |
 | `hrDecision` | enum | `pending`, `approved`, `rejected` |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
+
+**Application Status Flow:**
+
+```
+pending → screening → screening_passed / screening_failed
+                     → scheduled → test_completed → offered / rejected
+```
 
 ### Question
 
@@ -893,9 +1185,15 @@ Submit test answers. **Candidate only.**
 | `correctAnswer` | string | MCQ correct answer ID |
 | `starterCode` | object | Starter code by language |
 | `allowedLanguages` | string[] | Allowed coding languages |
+| `minWords` | number | Essay min word count |
+| `maxWords` | number | Essay max word count |
+| `rubric` | object | Grading rubric |
 | `tags` | string[] | Skill/topic tags |
 | `source` | string | `llm` or `manual` |
+| `llmModel` | string | LLM model used |
 | `usageCount` | number | Times used in tests |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
 
 ### Test
 
@@ -904,18 +1202,20 @@ Submit test answers. **Candidate only.**
 | `_id` | ObjectId | Unique identifier |
 | `testId` | string | Human-readable ID (e.g., `TEST-ABC12345`) |
 | `applicationId` | ObjectId | Reference to Application |
-| `candidateId` | ObjectId | Reference to User |
+| `candidateId` | ObjectId | Reference to User (candidate) |
 | `jobId` | ObjectId | Reference to Job |
 | `questionIds` | ObjectId[] | References to Questions |
 | `totalTime` | number | Time limit in minutes |
-| `status` | enum | Test status |
+| `status` | enum | `pending`, `ready`, `in_progress`, `submitted`, `graded`, `expired` |
 | `scheduledAt` | Date | Scheduled start time |
 | `startedAt` | Date | Actual start time |
 | `submittedAt` | Date | Submission time |
-| `answers` | array | Candidate's answers |
-| `language` | string | Preferred language |
-| `proctoringLogs` | array | Violation logs |
+| `answers` | array | Candidate's answers `{ questionId, answer, language, flagged, timeSpent }` |
+| `language` | string | Preferred programming language |
+| `proctoringLogs` | array | Violation logs `{ timestamp, type, event, details }` |
 | `focusLossCount` | number | Focus loss events |
+| `createdAt` | Date | Creation timestamp |
+| `updatedAt` | Date | Last update timestamp |
 
 ---
 
@@ -938,7 +1238,7 @@ All errors return a consistent format:
 | 401 | UnauthorizedError | Missing or invalid token |
 | 403 | ForbiddenError | Insufficient permissions |
 | 404 | NotFoundError | Resource not found |
-| 409 | ConflictError | Duplicate resource (e.g., email exists) |
+| 409 | ConflictError | Duplicate resource (e.g., already applied) |
 | 500 | AppError | Internal server error |
 
 ---
