@@ -14,6 +14,8 @@ from pydantic_settings import BaseSettings
 from .core.config import settings
 from .api.repo_evaluation import router as repo_evaluation_router
 from .api.github_profile import router as github_profile_router
+from .api.matching import router as matching_router
+from .api.question_gen import router as question_gen_router
 from .services.llm_service import (
     get_llm_service,
     ChatMessage,
@@ -61,6 +63,12 @@ app.include_router(repo_evaluation_router)
 
 # Include GitHub Profile router
 app.include_router(github_profile_router)
+
+# Include Matching router
+app.include_router(matching_router)
+
+# Include Question Generation router
+app.include_router(question_gen_router)
 
 
 # Request/Response models
