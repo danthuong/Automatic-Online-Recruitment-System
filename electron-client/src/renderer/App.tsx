@@ -16,6 +16,8 @@ import {
   loginToBackend,
   fetchCandidateProfile,
   fetchCVContent,
+  fetchTestById,
+  convertNodeJSToAppQuestion,
 } from '@/renderer/services/interview-api'
 
 // Total exam time: 75 minutes (allows 15 min per question)
@@ -67,73 +69,17 @@ function App() {
         setQuestionError(null)
 
         try {
-          console.log('[App] Loading questions from API...', loginData)
+          console.log('[App] Loading questions from Node.js API...', loginData)
 
-          // Step 1: Login to backend with testId (email) and candidateId (password)
-          console.log('[App] Authenticating with backend...')
-          const authResult = await loginToBackend(loginData.testId, loginData.candidateId)
-          console.log('[App] Authenticated as:', authResult.user.email)
+          // Fetch test from Node.js server using testId
+          console.log('[App] Fetching test from Node.js API...')
+          const testResponse = await fetchTestById(loginData.testId)
 
-          // Step 2: Fetch candidate profile (includes CV URL, GitHub URL, etc.)
-          console.log('[App] Fetching candidate profile...')
-          const profile = await fetchCandidateProfile()
-          console.log('[App] Profile loaded:', {
-            name: profile.user?.firstName,
-            skills: profile.skills,
-            hasCV: !!profile.cvUrl,
-            hasGitHub: !!profile.githubUrl,
-          })
+          console.log('[App] Test loaded:', testResponse.questions.length, 'questions')
 
-          // Set candidate name from profile
-          const candidateName = profile.user?.firstName
-            ? `${profile.user.firstName} ${profile.user.lastName || ''}`.trim()
-            : loginData.candidateName
-          useExamStore.getState().setCandidateName(candidateName)
-
-          // Step 3: Fetch CV content if available
-          let cvContent = ''
-          if (profile.cvUrl) {
-            try {
-              console.log('[App] Fetching CV content...')
-              cvContent = await fetchCVContent()
-              console.log('[App] CV content loaded:', cvContent.substring(0, 100) + '...')
-            } catch (cvErr) {
-              console.warn('[App] Failed to fetch CV:', cvErr)
-            }
-          }
-
-          // Step 4: Fetch GitHub profile if URL is available
-          let githubData: GitHubProfileData | undefined
-          if (profile.githubUrl) {
-            try {
-              // Extract username from GitHub URL
-              const match = profile.githubUrl.match(/github\.com\/([^\/]+)/)
-              if (match) {
-                console.log('[App] Fetching GitHub profile:', match[1])
-                const ghProfile = await fetchGitHubProfile(match[1])
-                if (ghProfile) {
-                  githubData = ghProfile
-                  console.log('[App] GitHub profile fetched:', ghProfile.username, ghProfile.repositories.length, 'repos')
-                }
-              }
-            } catch (ghErr) {
-              console.warn('[App] Failed to fetch GitHub:', ghErr)
-            }
-          }
-
-          // Step 5: Generate interview questions using profile data
-          console.log('[App] Calling generateInterview API...')
-          const response = await generateInterview(
-            candidateName,
-            githubData,
-            undefined // jobDescription - can be added if available from profile
-          )
-
-          console.log('[App] Interview generated:', response.questions.length, 'questions')
-
-          // Convert backend questions to app format
-          const appQuestions: Question[] = response.questions.map((q, idx) => {
-            const converted = convertToAppQuestion(q)
+          // Convert Node.js questions to app format
+          const appQuestions: Question[] = testResponse.questions.map((q, idx) => {
+            const converted = convertNodeJSToAppQuestion(q)
             console.log(`[App] Question ${idx + 1}:`, converted.id, converted.type, converted.difficulty)
             return converted
           })

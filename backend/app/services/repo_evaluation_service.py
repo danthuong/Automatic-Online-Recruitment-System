@@ -496,7 +496,7 @@ Respond in JSON format:
             logger.info(f"Evaluating repo: {parsed['owner']}/{parsed['repo']}")
 
             # Update status to processing
-            evaluation.status = EvaluationStatus.PROCESSING
+            evaluation.status = EvaluationStatus.IN_PROGRESS
 
             # Create temp directory
             temp_dir = tempfile.mkdtemp(prefix='repo_eval_')

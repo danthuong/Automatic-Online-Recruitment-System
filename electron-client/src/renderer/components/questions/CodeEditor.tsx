@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/renderer/components/ui/card'
 import { cn } from '@/renderer/lib/utils'
-import { Code, RotateCcw, Play, ChevronDown } from 'lucide-react'
+import { Code, RotateCcw, Play, ChevronDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/renderer/components/ui/button'
 import type { Language } from '@/renderer/store/examStore'
+import type { TestResult } from '@/renderer/services/interview-api'
 
 interface CodeEditorProps {
   question: string
@@ -14,7 +15,9 @@ interface CodeEditorProps {
   onChange: (value: string) => void
   onLanguageChange?: (language: Language) => void
   onReset?: () => void
-  onRunTests?: () => void
+  onRunTests?: (code: string, problemId: string) => Promise<void>
+  testResults?: TestResult[]
+  passPercentage?: number
   maxLines?: number
   className?: string
 }
@@ -53,6 +56,8 @@ export function CodeEditor({
   onLanguageChange,
   onReset,
   onRunTests,
+  testResults,
+  passPercentage,
   maxLines = 20,
   className,
 }: CodeEditorProps) {
@@ -82,7 +87,9 @@ export function CodeEditor({
     if (!onRunTests) return
     setIsRunning(true)
     try {
-      await onRunTests()
+      // Get question ID from the question prop (it's passed as the question string in some cases)
+      // We'll pass the code and let the parent handle the question ID
+      await onRunTests(value, question)
     } finally {
       setIsRunning(false)
     }
@@ -227,6 +234,61 @@ export function CodeEditor({
           </div>
         </div>
       </CardContent>
+
+      {/* Test Results Panel */}
+      {(testResults && testResults.length > 0) && (
+        <div className="border-t border-slate-700/30 bg-slate-900/50 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+              Test Results
+              {passPercentage !== undefined && (
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-xs font-bold",
+                  passPercentage === 100 ? "bg-green-500/20 text-green-400" :
+                  passPercentage >= 50 ? "bg-yellow-500/20 text-yellow-400" :
+                  "bg-red-500/20 text-red-400"
+                )}>
+                  {passPercentage.toFixed(1)}% passed
+                </span>
+              )}
+            </h4>
+          </div>
+          <div className="space-y-2">
+            {testResults.map((result, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg text-sm",
+                  result.passed ? "bg-green-500/10 border border-green-500/20" : "bg-red-500/10 border border-red-500/20"
+                )}
+              >
+                {result.passed ? (
+                  <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className={result.passed ? "text-green-400" : "text-red-400"}>
+                      Test Case {result.test_case}
+                    </span>
+                  </div>
+                  <div className="text-slate-400 text-xs space-y-0.5">
+                    <div><span className="text-slate-500">Input:</span> {result.input}</div>
+                    <div><span className="text-slate-500">Expected:</span> {result.expected}</div>
+                    {!result.passed && (
+                      <div><span className="text-slate-500">Actual:</span> <span className="text-red-400">{result.actual}</span></div>
+                    )}
+                    {result.error && (
+                      <div className="text-red-400 mt-1">{result.error}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
