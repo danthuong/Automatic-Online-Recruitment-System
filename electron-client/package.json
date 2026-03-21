@@ -88,8 +88,12 @@
           ]
         }
       ],
-      "icon": "public/icon.ico",
-      "sign": false
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true
     }
   }
 }
