@@ -7,9 +7,10 @@ POST /api/matching/cv-jd/pdf - Compare candidate's CV with job description (from
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Request
 from pydantic import BaseModel
 
+from ..services.pdf_parser_service import get_pdf_parser_service
 from ..services.matching_service import get_matching_service
 
 logger = logging.getLogger(__name__)
@@ -38,187 +39,93 @@ class CVJDMatchingResponse(BaseModel):
     matchedPreferredSkills: list
     llmFeedback: str
 
-
 @router.post("/cv-jd")
 async def compute_cv_jd_match(
     request: CVJDMatchingRequest,
     authorization: Optional[str] = Header(None)
 ):
-    """
-    Compare candidate's CV with job description to compute match score.
-
-    This endpoint:
-    1. Fetches candidate's profile from Node.js API to get cvUrl
-    2. Downloads the CV PDF from the cvUrl
-    3. Extracts text from PDF
-    4. Fetches job description
-    5. Uses LLM to analyze the match and generate feedback
-    6. Returns comprehensive match scores and analysis
-
-    Request body:
-        - candidateId: ID of the candidate (for job assignment, optional)
-        - jobId: ID of the job
-
-    Returns:
-        - overallScore: Weighted average of all match scores (0-100)
-        - skillMatchScore: How well candidate's skills match required skills
-        - experienceMatchScore: How well experience matches job level
-        - educationMatchScore: How well education matches requirements
-        - skillGaps: Skills required by job that candidate lacks
-        - strengths: Skills candidate has that match job requirements
-        - matchedPreferredSkills: Preferred skills candidate possesses
-        - llmFeedback: LLM-generated summary of the match
-    """
     import httpx
     from ..core.config import settings
 
-    # Extract token from Authorization header
-    token = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
+    token = authorization[7:] if authorization and authorization.startswith("Bearer ") else None
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     try:
-        # Step 1: Fetch candidate profile from Node.js API
-        tin_url = settings.tin_endpoint
-
+        tin_url = settings.tin_endpoint.rstrip('/')
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Get candidate profile
-            headers = {}
-            if token:
-                headers["Authorization"] = f"Bearer {token}"
+            # 1. Fetch Candidate & Job JSON data
+            cand_resp = await client.get(f"{tin_url}/users/me/candidate-profile", headers=headers)
+            job_resp = await client.get(f"{tin_url}/jobs/{request.jobId}", headers=headers)
+            
+            if cand_resp.status_code != 200 or job_resp.status_code != 200:
+                raise HTTPException(status_code=404, detail="Candidate or Job not found")
 
-            profile_resp = await client.get(
-                f"{tin_url}/users/me/candidate-profile",
-                headers=headers
-            )
+            candidate = cand_resp.json().get("data", {})
+            job = job_resp.json().get("data", {})
 
-            if profile_resp.status_code == 401:
-                raise HTTPException(status_code=401, detail="Unauthorized. Please login first.")
+            # 2. Check if CV is already parsed. If NOT, download and parse now.
+            parsed_cv = candidate.get("parsedCvData") or candidate.get("parsed_cv_data")
+            
+            if not parsed_cv:
+                cv_path = candidate.get("cvUrl") or candidate.get("resumeUrl")
+                # Download the PDF
+                cv_file_resp = await client.get(f"{tin_url}/{cv_path.lstrip('/')}", headers=headers)
+                
+                # Verify it's not a JSON error
+                if cv_file_resp.content.startswith(b'{"'):
+                    raise ValueError(f"Server returned error instead of PDF: {cv_file_resp.text}")
+                
+                # Parse the PDF bytes to a dict
+                pdf_parser = get_pdf_parser_service()
+                parsed_cv = pdf_parser.parse_cv_from_file(cv_file_resp.content)
+                logger.info("Successfully parsed CV on-the-fly.")
 
-            if profile_resp.status_code != 200:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Candidate profile not found"
-                )
-
-            profile_data = profile_resp.json()
-            candidate_profile = profile_data.get("data", {})
-
-            # Get cvUrl from profile
-            cv_url = candidate_profile.get("cvUrl")
-            if not cv_url:
-                raise HTTPException(
-                    status_code=400,
-                    detail="No CV found. Please upload your CV first."
-                )
-
-            # Step 2: Download CV PDF
-            # cvUrl is like "files/some_thing_abcd", need to prepend tin_url
-            if cv_url.startswith("http"):
-                cv_download_url = cv_url
-            else:
-                cv_download_url = f"{tin_url}/{cv_url}"
-
-            cv_resp = await client.get(cv_download_url, headers=headers)
-            if cv_resp.status_code != 200:
-                raise HTTPException(status_code=400, detail="Failed to download CV file")
-
-            cv_content = cv_resp.content
-
-            # Get job description if jobId provided
-            job_description = None
-            if request.jobId:
-                job_resp = await client.get(
-                    f"{tin_url}/jobs/{request.jobId}",
-                    headers=headers
-                )
-                if job_resp.status_code == 200:
-                    job_data = job_resp.json()
-                    job_info = job_data.get("data", {})
-                    job_description = job_info.get("description", "")
-
-            if not job_description:
-                job_description = "Software Engineer position"
-
-        # Step 3: Compute similarity using matching service
+        # 3. Use the Matching Service
         service = get_matching_service()
-        result = service.compute_cv_jd_from_pdfs(cv_content, job_description.encode())
+        
+        # We manually extract info because the JD is a string/JSON, 
+        # but we use our fresh 'parsed_cv' for the candidate.
+        candidate_info = service.extract_candidate_info({"parsedCvData": parsed_cv, **candidate})
+        job_info = service.extract_job_info(job)
 
-        # Add candidate info to result
-        result["candidateId"] = request.candidateId
-        result["jobId"] = request.jobId
-        result["candidateName"] = candidate_profile.get("user", {}).get("firstName", "Unknown")
-
-        logger.info(f"CV-JD matching completed for candidate {request.candidateId}, job {request.jobId}: score={result['overallScore']}")
-
+        # Call the LLM matching logic directly (or modify the service to accept dicts)
+        # For now, let's assume we use the service's internal prompt logic
+        result = service.compute_cv_jd_similarity(
+            candidate_id=candidate.get("id"),
+            job_id=request.jobId,
+            token=token,
+            pre_parsed_cv=parsed_cv
+        )
+        
         return result
 
-    except HTTPException:
-        raise
-    except ValueError as e:
-        error_msg = str(e)
-        if "CV not parsed" in error_msg:
-            raise HTTPException(
-                status_code=400,
-                detail="CV not parsed. Please upload and parse CV first."
-            )
-        elif "Candidate not found" in error_msg:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Candidate not found: {request.candidateId}"
-            )
-        elif "Job not found" in error_msg:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Job not found: {request.jobId}"
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=error_msg
-            )
-
     except Exception as e:
-        logger.error(f"CV-JD matching error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=503,
-            detail=f"Service unavailable: {str(e)}"
-        )
-
+        logger.error(f"Hybrid Match Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/cv-jd/pdf")
 async def compute_cv_jd_match_from_pdfs(
+    request: Request,
     cvFile: UploadFile = File(..., description="Candidate's CV as PDF"),
     jobFile: UploadFile = File(..., description="Job Description as PDF")
 ):
     """
     Compare candidate's CV PDF with job description PDF to compute match score.
 
-    This endpoint:
-    1. Accepts CV PDF file and Job Description PDF file
-    2. Extracts text from both PDFs using pypdf
-    3. Uses LLM to parse structured data (skills, experience, etc.)
-    4. Uses LLM to analyze the match and generate feedback
-    5. Returns comprehensive match scores and analysis
-
-    Request:
-        - cvFile: PDF file of candidate's CV
-        - jobFile: PDF file of job description
-
-    Returns:
-        - overallScore: Weighted average of all match scores (0-100)
-        - skillMatchScore: How well candidate's skills match required skills
-        - experienceMatchScore: How well experience matches job level
-        - educationMatchScore: How well education matches requirements
-        - skillGaps: Skills required by job that candidate lacks
-        - strengths: Skills candidate has that match job requirements
-        - matchedPreferredSkills: Preferred skills candidate possesses
-        - llmFeedback: LLM-generated summary of the match
-        - parsedCV: Extracted CV data (name, skills, experience, etc.)
-        - parsedJob: Extracted job data (title, required skills, etc.)
+    This endpoint accepts multipart/form-data with two PDF files.
     """
     try:
-        # Validate file types
+        content_type = request.headers.get("content-type", "unknown")
+        logger.info(f"PDF endpoint called - Content-Type: {content_type}")
+        logger.info(f"cvFile: {cvFile}, jobFile: {jobFile}")
+        logger.info(f"cvFile filename: {cvFile.filename if cvFile else 'None'}")
+        logger.info(f"jobFile filename: {jobFile.filename if jobFile else 'None'}")
+
+        if not cvFile:
+            raise HTTPException(status_code=400, detail="cvFile is required")
+        if not jobFile:
+            raise HTTPException(status_code=400, detail="jobFile is required")
         if not cvFile.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="CV file must be a PDF")
         if not jobFile.filename.lower().endswith('.pdf'):

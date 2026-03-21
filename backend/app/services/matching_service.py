@@ -224,7 +224,8 @@ class MatchingService:
         self,
         candidate_id: str,
         job_id: str,
-        token: Optional[str] = None
+        token: Optional[str] = None,
+        pre_parsed_cv: Optional[Dict[str, Any]] = None # <--- Add this
     ) -> Dict[str, Any]:
         """
         Compute similarity between candidate CV and job description.
@@ -249,10 +250,14 @@ class MatchingService:
             RuntimeError: If LLM fails to generate valid response
         """
         logger.info(f"Computing CV-JD similarity for candidate {candidate_id} and job {job_id}")
-
-        # Fetch data
-        candidate = self.fetch_candidate_data(candidate_id, token)
         job = self.fetch_job_data(job_id)
+
+        # If we already have the data (on-the-fly), use it. Otherwise, fetch.
+        if pre_parsed_cv:
+            candidate = {"data": {"parsedCvData": pre_parsed_cv, "id": candidate_id}}
+            logger.info("Using pre-parsed CV data provided by the caller.")
+        else:
+            candidate = self.fetch_candidate_data(candidate_id, token)
 
         # Extract relevant info
         candidate_info = self.extract_candidate_info(candidate)
