@@ -177,9 +177,17 @@ def base64_to_frame(b64_str: str) -> Optional[np.ndarray]:
     if not b64_str:
         return None
     try:
+        # Xóa tiền tố 'data:image/jpeg;base64,' nếu frontend vô tình gửi kèm
+        if "," in b64_str:
+            b64_str = b64_str.split(",")[1]
+            
         img_bytes = base64.b64decode(b64_str)
         nparr = np.frombuffer(img_bytes, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        # Đảo màu BGR sang RGB cho Mediapipe
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
         return frame
     except Exception:
         return None
