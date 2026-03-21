@@ -1,12 +1,29 @@
-import { Link } from 'react-router-dom'
-import { LogOut, Menu, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { LogOut, Menu, X, LayoutDashboard } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export function Navbar() {
   const { user, logout, isLoading } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
+  const isHr = user?.role === 'hr' || user?.role === 'admin'
+
+  const candidateLinks = [
+    { to: '/', label: 'Home' },
+    { to: '/jobs', label: 'Jobs' },
+    { to: '/companies', label: 'Companies' },
+  ]
+
+  const hrLinks = [
+    { to: '/', label: 'Dashboard' },
+    { to: '/hr/jobs', label: 'My Jobs' },
+  ]
+
+  const navLinks = isHr ? hrLinks : candidateLinks
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -34,9 +51,29 @@ export function Navbar() {
             </Link>
 
             <nav className="hidden md:flex items-center gap-1">
-              <NavLink to="/">Home</NavLink>
-              <NavLink to="/jobs">Jobs</NavLink>
-              <NavLink to="/companies">Companies</NavLink>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={cn(
+                    'px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                    location.pathname === link.to
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              {isHr && (
+                <Link
+                  to="/hr"
+                  className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+                >
+                  <LayoutDashboard className="w-4 h-4 inline mr-1.5" />
+                  HR Portal
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -65,9 +102,31 @@ export function Navbar() {
       {mobileOpen && (
         <div className="md:hidden border-t bg-card px-4 py-4 space-y-3">
           <nav className="flex flex-col gap-2">
-            <MobileNavLink to="/" onClick={() => setMobileOpen(false)}>Home</MobileNavLink>
-            <MobileNavLink to="/jobs" onClick={() => setMobileOpen(false)}>Jobs</MobileNavLink>
-            <MobileNavLink to="/companies" onClick={() => setMobileOpen(false)}>Companies</MobileNavLink>
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  'px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2',
+                  location.pathname === link.to
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {isHr && (
+              <Link
+                to="/hr"
+                onClick={() => setMobileOpen(false)}
+                className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md flex items-center gap-2"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                HR Portal
+              </Link>
+            )}
           </nav>
           <div className="pt-3 border-t flex items-center justify-between">
             <div>
@@ -83,28 +142,5 @@ export function Navbar() {
         </div>
       )}
     </header>
-  )
-}
-
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <Link
-      to={to}
-      className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-    >
-      {children}
-    </Link>
-  )
-}
-
-function MobileNavLink({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <Link
-      to={to}
-      onClick={onClick}
-      className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-    >
-      {children}
-    </Link>
   )
 }

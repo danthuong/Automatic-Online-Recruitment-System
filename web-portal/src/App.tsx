@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { HrRoute } from '@/components/HrRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { HomePage } from '@/pages/HomePage'
@@ -11,6 +12,11 @@ import { JobDetailPage } from '@/pages/JobDetailPage'
 import { CompaniesPage } from '@/pages/CompaniesPage'
 import { CompanyDetailPage } from '@/pages/CompanyDetailPage'
 import { LandingPage } from '@/pages/LandingPage'
+import { HrDashboard } from '@/pages/hr/HrDashboard'
+import { HrJobsPage } from '@/pages/hr/HrJobsPage'
+import { CreateJobPage } from '@/pages/hr/CreateJobPage'
+import { HrJobDetailPage } from '@/pages/hr/HrJobDetailPage'
+import { ApplicationReviewPage } from '@/pages/hr/ApplicationReviewPage'
 
 function AppRoutes() {
   return (
@@ -26,6 +32,8 @@ function AppRoutes() {
         </AuthLayout>
       } />
       <Route path="/landing" element={<LandingPage />} />
+
+      {/* Candidate Routes */}
       <Route path="/jobs" element={
         <ProtectedRoute>
           <JobsPage />
@@ -50,6 +58,38 @@ function AppRoutes() {
         <ProtectedRoute>
           <HomePage />
         </ProtectedRoute>
+      } />
+
+      {/* HR Routes */}
+      <Route path="/hr" element={
+        <HrRoute>
+          <HrDashboard />
+        </HrRoute>
+      } />
+      <Route path="/hr/jobs" element={
+        <HrRoute>
+          <HrJobsPage />
+        </HrRoute>
+      } />
+      <Route path="/hr/jobs/create" element={
+        <HrRoute>
+          <CreateJobPage />
+        </HrRoute>
+      } />
+      <Route path="/hr/jobs/:id" element={
+        <HrRoute>
+          <HrJobDetailPage />
+        </HrRoute>
+      } />
+      <Route path="/hr/jobs/:id/edit" element={
+        <HrRoute>
+          <CreateJobPage />
+        </HrRoute>
+      } />
+      <Route path="/hr/applications/:id" element={
+        <HrRoute>
+          <ApplicationReviewPage />
+        </HrRoute>
       } />
 
       <Route path="*" element={<Navigate to="/" replace />} />

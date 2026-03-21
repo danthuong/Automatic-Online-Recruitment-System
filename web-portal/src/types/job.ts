@@ -44,15 +44,40 @@ export interface CompanyResponse {
   createdAt: string
 }
 
+export interface CandidateInfo {
+  id: string
+  userId: string
+  user?: {
+    id: string
+    email: string
+    role: string
+    firstName: string
+    lastName: string
+    isActive: boolean
+    createdAt: Date
+  }
+  email?: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  resumeUrl?: string
+  githubUrl?: string
+  faceImageUrl?: string
+  cvUrl?: string
+  parsedCvData?: Record<string, unknown>
+  skills: string[]
+  experience: number
+  education?: string
+  linkedInUrl?: string
+  portfolioUrl?: string
+  wowScore?: number
+  createdAt: string
+}
+
 export interface ApplicationResponse {
   id: string
   candidateId: string
-  candidate?: {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-  }
+  candidate?: CandidateInfo
   jobId: string
   job?: JobResponse
   status: ApplicationStatus

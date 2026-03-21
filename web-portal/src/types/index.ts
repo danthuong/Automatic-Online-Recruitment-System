@@ -48,6 +48,31 @@ export enum ApplicationStatus {
   REJECTED = 'rejected',
 }
 
+export enum TestStatus {
+  PENDING = 'pending',
+  READY = 'ready',
+  IN_PROGRESS = 'in_progress',
+  SUBMITTED = 'submitted',
+  GRADED = 'graded',
+  EXPIRED = 'expired',
+}
+
+export interface TestResponse {
+  id: string
+  testId: string
+  applicationId: string
+  candidateId: string
+  jobId: string
+  totalTime: number
+  status: TestStatus
+  scheduledAt?: string
+  startedAt?: string
+  submittedAt?: string
+  language?: string
+  focusLossCount?: number
+  createdAt: string
+}
+
 export interface Salary {
   min?: number
   max?: number
