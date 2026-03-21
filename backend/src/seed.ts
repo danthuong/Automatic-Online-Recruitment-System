@@ -118,6 +118,13 @@ const seed = async (): Promise<void> => {
         education: cd.education,
         githubUrl: cd.githubUrl,
         wowScore: Math.floor(Math.random() * 40) + 60,
+        parsedCvData: {
+          skills: cd.skills,
+          experience_years: cd.experience,
+          education: cd.education,
+          projects: [],
+          summary: `${cd.firstName} ${cd.lastName} is a ${cd.experience}-year experienced developer with expertise in ${cd.skills.slice(0, 3).join(', ')} and more.`,
+        },
       });
 
       candidates.push({ user, candidate });
