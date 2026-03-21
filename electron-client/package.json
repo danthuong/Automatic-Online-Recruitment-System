@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:python": "cd ../ai && python server.py",
     "dev:full": "concurrently --kill-others-on-fail --names \"ELECTRON,PYTHON\" --prefix-colors \"cyan,magenta\" \"npm run dev\" \"npm run dev:python\"",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc && vite build && electron-packager . RecruitExam --platform=win32 --arch=x64 --out=release --overwrite",
     "build:vite": "tsc && vite build",
     "postinstall": "electron-rebuild",
     "preview": "vite preview",
@@ -46,6 +46,7 @@
     "autoprefixer": "^10.4.17",
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
@@ -80,13 +81,14 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "icon": "public/icon.ico"
+      "icon": "public/icon.ico",
+      "sign": false
     }
   }
 }
