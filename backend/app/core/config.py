@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # OpenAI settings
     openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4o-mini"
 
     # Anthropic settings
     anthropic_api_key: Optional[str] = None
