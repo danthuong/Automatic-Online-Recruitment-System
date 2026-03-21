@@ -33,6 +33,7 @@ export function PhoneCameraConnector({
   const videoRef = useRef<HTMLVideoElement>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const socketRef = useRef<any>(null)
+  const autoConnectRef = useRef(false)
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [phoneUrl, setPhoneUrl] = useState<string>('')
@@ -40,7 +41,6 @@ export function PhoneCameraConnector({
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [isLoadingQr, setIsLoadingQr] = useState(true)
   const [serverUrl, setServerUrl] = useState<string | null>(null)
-  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadQrCode = useCallback(async () => {
     try {
@@ -60,126 +60,9 @@ export function PhoneCameraConnector({
     }
   }, [])
 
-  useEffect(() => {
-    loadQrCode()
-    qrPollRef.current = setInterval(loadQrCode, 5000)
+  const createPeerConnection = useCallback(() => {
+    if (peerConnectionRef.current) return peerConnectionRef.current
 
-    return () => {
-      if (qrPollRef.current) clearInterval(qrPollRef.current)
-      disconnect()
-    }
-  }, [loadQrCode])
-
-  const connect = useCallback(async () => {
-    if (status !== 'idle') return
-
-    setStatus('connecting')
-    setErrorMsg('')
-
-    try {
-      await loadQrCode()
-
-      if (!window.io) {
-        await loadSocketIO()
-      }
-
-      await connectSignaling()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Connection failed'
-      setErrorMsg(msg)
-      setStatus('error')
-      onError(new Error(msg))
-    }
-  }, [status, loadQrCode, onError])
-
-  const loadSocketIO = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (window.io) {
-        resolve()
-        return
-      }
-
-      const script = document.createElement('script')
-      script.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js'
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Failed to load Socket.IO'))
-      document.head.appendChild(script)
-    })
-  }
-
-  const connectSignaling = async (): Promise<void> => {
-    const serverUrl = await getAIServerUrl()
-    return new Promise((resolve, reject) => {
-      const socket = window.io(serverUrl, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000,
-      })
-
-      socketRef.current = socket
-
-      socket.on('connect', async () => {
-        console.log('[PhoneCamera] Connected to signaling')
-        socket.emit('exam_join', {})
-
-        const pc = createPeerConnection()
-        peerConnectionRef.current = pc
-
-        setStatus('waiting')
-        resolve()
-      })
-
-      socket.on('connect_error', (err: any) => {
-        console.error('[PhoneCamera] Connection error:', err.message, '| Type:', err.type, '| Context:', JSON.stringify(err.context || {}))
-        reject(new Error('Cannot connect to signaling server: ' + (err.message || 'connection rejected')))
-      })
-
-      socket.on('disconnect', () => {
-        console.log('[PhoneCamera] Disconnected from signaling')
-        setStatus('error')
-        setErrorMsg('Disconnected from server')
-      })
-
-      socket.on('phone_joined', (data: any) => {
-        console.log('[PhoneCamera] Phone joined:', data)
-      })
-
-      socket.on('offer', async (data: any) => {
-        console.log('[PhoneCamera] Received offer')
-        if (!peerConnectionRef.current) return
-
-        try {
-          await peerConnectionRef.current.setRemoteDescription(
-            new RTCSessionDescription(data)
-          )
-          const answer = await peerConnectionRef.current.createAnswer()
-          await peerConnectionRef.current.setLocalDescription(answer)
-          socket.emit('answer', {
-            sdp: answer.sdp,
-            type: answer.type,
-          })
-          console.log('[PhoneCamera] Answer sent')
-        } catch (err) {
-          console.error('[PhoneCamera] Offer handling error:', err)
-        }
-      })
-
-      socket.on('ice_candidate', async (data: any) => {
-        if (!peerConnectionRef.current || !data.candidate) return
-        try {
-          await peerConnectionRef.current.addIceCandidate(
-            new RTCIceCandidate(data.candidate)
-          )
-        } catch (err) {
-          console.error('[PhoneCamera] ICE add error:', err)
-        }
-      })
-    })
-  }
-
-  const createPeerConnection = (): RTCPeerConnection => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
     pc.onicecandidate = (e) => {
@@ -215,10 +98,100 @@ export function PhoneCameraConnector({
       }
     }
 
+    peerConnectionRef.current = pc
     return pc
-  }
+  }, [onStreamReady])
+
+  const connectSignaling = useCallback(() => {
+    return new Promise<void>((resolve, reject) => {
+      if (socketRef.current) {
+        resolve()
+        return
+      }
+
+      getAIServerUrl().then((serverUrl) => {
+        const socket = window.io(serverUrl, {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000,
+          timeout: 20000,
+        })
+
+        socketRef.current = socket
+
+        socket.on('connect', () => {
+          console.log('[PhoneCamera] Connected to signaling, socket.id:', socket.id)
+          socket.emit('exam_join', {})
+          createPeerConnection()
+          setStatus('waiting')
+          resolve()
+        })
+
+        socket.on('connect_error', (err: any) => {
+          console.error('[PhoneCamera] Connection error:', err.message)
+          setStatus('error')
+          setErrorMsg('Cannot connect to server')
+          if (autoConnectRef.current) {
+            reject(new Error('Cannot connect to signaling server'))
+          }
+        })
+
+        socket.on('disconnect', () => {
+          console.log('[PhoneCamera] Disconnected from signaling')
+          if (autoConnectRef.current) {
+            setStatus('idle')
+            setErrorMsg('Disconnected. Retrying...')
+          }
+        })
+
+        socket.on('exam_ready', () => {
+          console.log('[PhoneCamera] Exam ready - phone joined')
+        })
+
+        socket.on('offer', async (data: any) => {
+          console.log('[PhoneCamera] Received offer')
+          const pc = peerConnectionRef.current
+          if (!pc) {
+            console.log('[PhoneCamera] No peer connection, creating now')
+            createPeerConnection()
+          }
+
+          try {
+            const activePc = peerConnectionRef.current
+            if (!activePc) return
+
+            await activePc.setRemoteDescription(new RTCSessionDescription(data))
+            const answer = await activePc.createAnswer()
+            await activePc.setLocalDescription(answer)
+            socket.emit('answer', {
+              sdp: answer.sdp,
+              type: answer.type,
+            })
+            console.log('[PhoneCamera] Answer sent')
+          } catch (err) {
+            console.error('[PhoneCamera] Answer error:', err)
+          }
+        })
+
+        socket.on('ice_candidate', async (data: any) => {
+          if (!peerConnectionRef.current || !data.candidate) return
+          try {
+            await peerConnectionRef.current.addIceCandidate(
+              new RTCIceCandidate(data.candidate)
+            )
+          } catch (err) {
+            console.error('[PhoneCamera] ICE add error:', err)
+          }
+        })
+      }).catch((err) => {
+        reject(err)
+      })
+    })
+  }, [createPeerConnection])
 
   const disconnect = useCallback(() => {
+    autoConnectRef.current = false
     if (socketRef.current) {
       socketRef.current.disconnect()
       socketRef.current = null
@@ -232,6 +205,27 @@ export function PhoneCameraConnector({
     }
     setStatus('idle')
     setErrorMsg('')
+  }, [])
+
+  const retryConnection = useCallback(() => {
+    disconnect()
+    setTimeout(() => {
+      autoConnectRef.current = true
+      setStatus('connecting')
+      connectSignaling().catch(() => {})
+    }, 500)
+  }, [disconnect, connectSignaling])
+
+  useEffect(() => {
+    loadQrCode()
+    autoConnectRef.current = true
+
+    setStatus('connecting')
+    connectSignaling().catch(() => {})
+
+    return () => {
+      disconnect()
+    }
   }, [])
 
   return (
@@ -291,7 +285,7 @@ export function PhoneCameraConnector({
             <p className="font-medium mb-1">Instructions:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Connect phone to the same WiFi network</li>
-              <li>Open your phone's camera app</li>
+              <li>Open your phone browser</li>
               <li>Scan the QR code above</li>
               <li>Allow camera access on your phone</li>
               <li>Position hands in frame</li>
@@ -336,7 +330,7 @@ export function PhoneCameraConnector({
               {status === 'connected' && <CheckCircle2 className="w-4 h-4" />}
               {status === 'error' && <WifiOff className="w-4 h-4" />}
               <span>
-                {status === 'idle' && 'Waiting to connect'}
+                {status === 'idle' && 'Not connected'}
                 {status === 'connecting' && 'Connecting to server...'}
                 {status === 'waiting' && 'Waiting for phone...'}
                 {status === 'connected' && 'Phone camera connected!'}
@@ -344,39 +338,18 @@ export function PhoneCameraConnector({
               </span>
             </div>
 
-            {status !== 'connected' && (
-              <p className={cn(
-                'mt-2 text-xs',
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              )}>
-                {status === 'waiting'
-                  ? 'Ask the examinee to scan the QR code with their phone camera'
-                  : status === 'connecting'
-                    ? 'Establishing connection to the exam server...'
-                    : 'Click Connect to start'}
-              </p>
-            )}
-
-            {status === 'connected' && (
-              <p className={cn(
-                'mt-2 text-xs text-green-600 dark:text-green-400'
-              )}>
-                Camera feed is being processed for hand gesture detection
-              </p>
-            )}
-
             <div className="mt-4 flex gap-2">
-              {status === 'idle' || status === 'error' ? (
-                <Button onClick={connect} className="flex-1" size="sm">
+              {status === 'error' ? (
+                <Button onClick={retryConnection} className="flex-1" size="sm">
                   <Smartphone className="w-4 h-4 mr-2" />
-                  Connect
+                  Retry
                 </Button>
               ) : status === 'connected' ? (
                 <Button onClick={disconnect} variant="destructive" className="flex-1" size="sm">
                   Disconnect
                 </Button>
               ) : (
-                <Button onClick={disconnect} variant="outline" className="flex-1" size="sm" disabled>
+                <Button onClick={retryConnection} variant="outline" className="flex-1" size="sm" disabled>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   {status === 'connecting' ? 'Connecting...' : 'Waiting...'}
                 </Button>
