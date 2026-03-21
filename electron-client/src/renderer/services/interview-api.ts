@@ -324,6 +324,20 @@ export interface NodeJSTestCase {
   isHidden?: boolean
 }
 
+export interface NodeJSTestResponse {
+  success: boolean
+  data: {
+    test: {
+      id: string
+      testId: string
+      totalTime: number
+      status: string
+      language: string
+    }
+    questions: NodeJSQuestion[]
+  }
+}
+
 export interface NodeJSQuestion {
   id: string
   testId: string
@@ -350,8 +364,8 @@ export interface NodeJSTest {
 /**
  * Fetch test by ID from the Node.js server
  */
-export async function fetchTestById(testId: string): Promise<NodeJSTest> {
-  const response = await fetch(`${BACKEND_API_URL}/tests/testid/${testId}`, {
+export async function fetchTestById(testId: string): Promise<NodeJSTestResponse> {
+  const response = await fetch(`${BACKEND_API_URL}/tests/testId/${testId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
