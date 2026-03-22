@@ -151,8 +151,21 @@ def detect_solution_leak(response: str) -> Tuple[bool, str]:
         if re.search(pattern, response_lower):
             return True, f"Solution leak detected: {pattern}"
 
-    # Check if response has too much code (more than 3 lines)
-    code_lines = len(re.findall(r'^\s*[^#\s].*', response, re.MULTILINE))
+    # Check if response has too much code - look for actual code patterns, not sentences
+    # Count lines that look like code (contain keywords, brackets, operators, etc.)
+    code_indicators = ['def ', 'class ', 'import ', 'return ', 'if ', 'for ', 'while ', '=', '->', '{', '}', '(', ')', '[', ']']
+    code_lines = 0
+    for line in response.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('//'):
+            continue
+        # Check if line contains code indicators
+        if any(indicator in line for indicator in code_indicators):
+            code_lines += 1
+        # Also count lines inside code blocks
+        elif line.startswith('```') or line.startswith('```'):
+            continue  # Skip code block markers
+
     if code_lines > 3:
         return True, "Response contains excessive code"
 

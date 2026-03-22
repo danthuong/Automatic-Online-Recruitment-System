@@ -6,20 +6,38 @@ import { ThemeToggle } from '@/renderer/components/ui/theme-toggle'
 import { IntroLogo } from '@/renderer/components/ui/IntroLogo'
 import { useExamStore } from '@/renderer/store/examStore'
 import { cn } from '@/renderer/lib/utils'
-import { 
-  Shield, 
-  Lock, 
-  User, 
+import {
+  Shield,
+  Lock,
+  User,
   Terminal,
   CheckCircle,
 } from 'lucide-react'
+
+interface LoginData {
+  testId: string
+  candidateId: string
+  candidateName: string
+}
 
 export function LoginScreen() {
   const [testId, setTestId] = useState('')
   const [candidateId, setCandidateId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { setLogin, setCandidateName } = useExamStore()
+  const { setLogin } = useExamStore()
+
+  // Store login data in window for App.tsx to use
+  const getLoginData = (): LoginData => ({
+    testId: testId.trim(),
+    candidateId: candidateId.trim(),
+    candidateName: `Candidate ${candidateId.trim()}`,
+  })
+
+  // Expose login data to window for App.tsx
+  React.useEffect(() => {
+    (window as any).__loginData = getLoginData()
+  }, [testId, candidateId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,12 +46,11 @@ export function LoginScreen() {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 800))
-      
+
       if (!testId.trim() || !candidateId.trim()) {
         throw new Error('Please enter both Test ID and Candidate ID')
       }
 
-      setCandidateName(`Candidate ${candidateId}`)
       setLogin(testId.trim(), candidateId.trim())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')

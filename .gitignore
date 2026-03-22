@@ -60,6 +60,13 @@ electron-client/release/
 # MCP
 .playwright-mcp/
 
+# Backend data (generated files)
+backend/data/problems.json
+backend/data/cached_github_profiles.json
+
 # Temporary files
 *.tmp
 temp/
+
+# models
+*.h5

@@ -12,11 +12,25 @@ class Settings(BaseSettings):
 
     # OpenAI settings
     openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4o-mini"
 
     # Anthropic settings
     anthropic_api_key: Optional[str] = None
     anthropic_model: str = "claude-sonnet-4-20250514"
+
+    # MiniMax settings (free alternative)
+    minimax_api_key: Optional[str] = None
+    minimax_model: str = "MiniMax-M2.5"
+
+    # OpenRouter settings (free tier for Claude/GPT) - uses same key as MINIMAX_API_KEY if it's an OpenRouter key
+    openrouter_model: str = "anthropic/claude-3.5-sonnet"
+
+    # TinyFish settings (for GitHub profile scraping)
+    tinyfish_api_key: Optional[str] = None
+
+    # GitHub evaluation settings
+    default_max_repos: int = 10
+    evaluation_fast_mode: bool = True  # Skip git clone, use GitHub API only
 
     # Server settings
     host: str = "0.0.0.0"

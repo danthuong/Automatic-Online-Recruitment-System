@@ -8,12 +8,16 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 from .core.config import settings
-from .api.tinyfish import router as tinyfish_router
 from .api.repo_evaluation import router as repo_evaluation_router
+from .api.github_profile import router as github_profile_router
+from .api.matching import router as matching_router
+from .api.question_gen import router as question_gen_router
+from .api.interview import router as interview_router
 from .services.llm_service import (
     get_llm_service,
     ChatMessage,
@@ -56,11 +60,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include TinyFish routers
-app.include_router(tinyfish_router)
-
 # Include Repo Evaluation router
 app.include_router(repo_evaluation_router)
+
+# Include GitHub Profile router
+app.include_router(github_profile_router)
+
+# Include Matching router
+app.include_router(matching_router)
+
+# Include Question Generation router
+app.include_router(question_gen_router)
+
+# Include Interview router
+app.include_router(interview_router)
+
+# Mount static files for interview UI
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # Request/Response models

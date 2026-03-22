@@ -8,6 +8,10 @@ process.env.NODE_ENV = 'development'
 app.commandLine.appendSwitch('enable-features', 'HardwareMediaStreamEncoding,VaapiVideoDecoder')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
+app.commandLine.appendSwitch('ignore-certificate-errors')
+app.commandLine.appendSwitch('allow-insecure-localhost', 'true')
+app.commandLine.appendSwitch('ignore-certificate-errors-spki-list') // Reset danh sách
+app.commandLine.appendSwitch('unsafely-treat-insecure-origin-as-secure', 'https://localhost:8765,https://127.0.0.1:8765,https://192.168.31.188:8765')
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
@@ -23,6 +27,8 @@ let totalTimeOutside = 0
 let lastBlurTime: number | null = null
 let processViolationCount = 0
 const PROCESS_VIOLATION_THRESHOLD = 3
+
+const AI_SERVER_PORT = 8765
 
 type IOHookInstance = {
   on(event: string, callback: (event: any) => void): void
@@ -185,7 +191,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: true,
+      webSecurity: false,
       devtools: true,
     },
     show: false,
@@ -763,7 +769,18 @@ ipcMain.handle(IPC_CHANNELS.CONTENT.DISABLE_PROTECTION, async () => {
   return { success: true }
 })
 
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // Cho phép bỏ qua lỗi SSL cho môi trường local/dev
+  event.preventDefault();
+  callback(true);
+});
+
 app.whenReady().then(() => {
+  const { session } = require('electron')
+  session.defaultSession.setCertificateVerifyProc((_req: any, callback: (result: number) => void) => {
+    callback(0)
+  })
+
   if (!checkAdminPrivileges()) {
     console.warn('[App] Warning: Running without administrator privileges')
     console.warn('[App] Some security features may not work correctly')
