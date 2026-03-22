@@ -57,12 +57,16 @@ class GitHubScraperService:
 
                     # Collect all data to find the final result
                     result_data = None
+                    all_data = []  # Debug: collect all events
+                    event_count = 0
                     for line in response.iter_lines():
+                        event_count += 1
                         if line.startswith("data: "):
                             data = line[6:]  # Remove "data: " prefix
+                            all_data.append(data)  # Debug
                             try:
                                 parsed = json.loads(data)
-                                logger.info(f"TinyFish received: type={parsed.get('type')}, status={parsed.get('status')}")
+                                logger.info(f"TinyFish event #{event_count}: type={parsed.get('type')}, status={parsed.get('status')}, msg={parsed.get('message', '')[:100]}")
                                 # Check for complete result - TinyFish returns COMPLETE type
                                 if parsed.get("type") == "COMPLETE" and parsed.get("status") == "COMPLETED":
                                     result_data = parsed.get("result")
@@ -74,6 +78,11 @@ class GitHubScraperService:
                             except json.JSONDecodeError as e:
                                 logger.warning(f"JSON decode error: {e}, data: {data[:100]}")
                                 continue
+
+                    logger.info(f"TinyFish: Total events received: {event_count}")
+                    # Debug: log all events if result is None
+                    if result_data is None:
+                        logger.warning(f"TinyFish: No COMPLETE result found. Events count: {event_count}, Events: {all_data}")
 
                     if result_data is None:
                         logger.error(f"TinyFish: Request returned None for {url}")

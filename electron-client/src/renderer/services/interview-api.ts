@@ -317,16 +317,91 @@ export async function generateInterview(
   return response.json()
 }
 
+// Types for Node.js Test API response
+export interface NodeJSTestCase {
+  input: string
+  output: string
+  isHidden?: boolean
+}
+
+export interface NodeJSQuestion {
+  id: string
+  testId: string
+  type: 'code' | 'mcq' | 'essay'
+  difficulty: 'easy' | 'medium' | 'hard'
+  title: string
+  content: string
+  constraints: string[]
+  examples: Array<{
+    input: string
+    output: string
+    explanation?: string
+  }>
+  testCases: NodeJSTestCase[]
+  allowedLanguages: string[]
+}
+
+export interface NodeJSTest {
+  id: string
+  testId: string
+  questions: NodeJSQuestion[]
+}
+
+/**
+ * Fetch test by ID from the Node.js server
+ */
+export async function fetchTestById(testId: string): Promise<NodeJSTest> {
+  const response = await fetch(`${BACKEND_API_URL}/tests/testid/${testId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Test not found. Please check your Test ID.')
+    }
+    throw new Error(`Failed to fetch test: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Convert Node.js question format to Electron app's Question format
+ */
+export function convertNodeJSToAppQuestion(nodeQuestion: NodeJSQuestion): Question {
+  const testCases = nodeQuestion.testCases?.map((tc, idx) => ({
+    input: tc.input,
+    expected: tc.output,
+    visible: !tc.isHidden,
+  })) || []
+
+  return {
+    id: nodeQuestion.id,
+    title: nodeQuestion.title,
+    difficulty: nodeQuestion.difficulty,
+    type: nodeQuestion.type,
+    question: nodeQuestion.content,
+    constraints: nodeQuestion.constraints,
+    examples: nodeQuestion.examples,
+    testCases: testCases,
+    allowedLanguages: nodeQuestion.allowedLanguages as any,
+    language: nodeQuestion.allowedLanguages?.[0] || 'python',
+  }
+}
+
 /**
  * Execute code against test cases
  */
 export async function executeCode(
   userCode: string,
-  problemId: number
+  problemId: string | number
 ): Promise<ExecuteCodeResponse> {
   const request: ExecuteCodeRequest = {
     user_code: userCode,
-    problem_id: problemId,
+    problem_id: typeof problemId === 'string' ? parseInt(problemId, 10) : problemId,
   }
 
   const response = await fetch(`${API_BASE_URL}/api/interview/execute_code`, {

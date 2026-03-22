@@ -10,8 +10,10 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List, Optional
+import uuid
 
 from fastapi import APIRouter, HTTPException
+from httpcore import request
 
 from ..models.evaluations import (
     EvaluationStatus,
@@ -130,9 +132,10 @@ async def fetch_github_profile(
         )
 
     # Fetch profile and repositories
-    logger.info(f"Fetching GitHub profile for: {username}")
+    logger.info(f"Fetching GitHub profile for: {username} with API key: {scraper.api_key[:10] if scraper.api_key else 'None'}...")
     try:
         data = scraper.fetch_profile_and_repos(username, request.max_repos)
+        logger.info(f"Scraper returned data: {data}")
     except Exception as e:
         logger.error(f"Scraper error: {e}", exc_info=True)
         raise HTTPException(
@@ -144,7 +147,8 @@ async def fetch_github_profile(
         logger.error(f"Scraper returned None for {username}")
         raise HTTPException(
             status_code=500,
-            detail=f"TinyFish API call failed. Check server logs. Username: {username}"
+            detail=f"TinyFish API call returned empty data. Check server logs. Username: {username}. "
+                   f"Make sure TinyFish API key is valid and GitHub user exists."
         )
 
     # Parse profile data
@@ -189,6 +193,7 @@ async def fetch_github_profile(
     for repo in repositories[:request.max_repos]:
         # Create evaluation record
         evaluation = RepoEvaluation(
+            id=str(uuid.uuid4()),
             username=username,
             repo_url=repo.url
         )
@@ -286,8 +291,9 @@ async def trigger_evaluations(username: str, max_repos: int = 10):
 
         # Create new evaluation
         evaluation = RepoEvaluation(
+            id=str(uuid.uuid4()),
             username=username,
-            repo_url=repo.url
+            repo_url=repo.url,
         )
         _evaluations_store[evaluation.id] = evaluation
         _username_evaluations[username][repo.full_name] = evaluation.id
@@ -379,8 +385,9 @@ async def evaluate_single_repo(request: dict):
 
     # Create evaluation
     evaluation = RepoEvaluation(
+        id=str(uuid.uuid4()),
         username=username,
-        repo_url=repo_url
+        repo_url=repo_url,
     )
     _evaluations_store[evaluation.id] = evaluation
 

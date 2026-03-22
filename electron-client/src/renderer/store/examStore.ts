@@ -65,7 +65,7 @@ interface ExamState {
   setAIStreams: (stream0: MediaStream | null, stream1: MediaStream | null) => void
   handleAIAlert: (alert: AIAlert) => void
   
-  setLogin: (testId: string, candidateId: string) => void
+  setLogin: (testId: string) => void
   setCandidateName: (name: string) => void
   setQuestions: (questions: Question[], totalTime: number) => void
   setCurrentQuestion: (index: number) => void
@@ -144,7 +144,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
     }
   },
 
-  setLogin: (testId, candidateId) => set({ testId, candidateId, status: 'precheck' }),
+  setLogin: (testId) => set({ testId, status: 'precheck' }),
   
   setCandidateName: (name) => set({ candidateName: name }),
   

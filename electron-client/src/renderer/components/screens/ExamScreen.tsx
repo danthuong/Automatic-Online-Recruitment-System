@@ -39,6 +39,7 @@ import {
   Keyboard,
   Lightbulb,
 } from 'lucide-react'
+import { executeCode, TestResult } from '@/renderer/services/interview-api'
 
 // LeetCode-style question panel component
 function QuestionPanel({
@@ -315,10 +316,17 @@ export function ExamScreen() {
     showWarningDialog,
     dismissWarningDialog,
     lastStrikeReason,
+    aiStream0,
+    aiStream1,
+    aiProctorState,
+    setAIProctorState,
+    handleAIAlert,
   } = useExamStore()
 
   const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(DEFAULT_LANGUAGE)
+  const [testResults, setTestResults] = useState<TestResult[]>([])
+  const [passPercentage, setPassPercentage] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     console.log('[ExamScreen] Mounted, questions:', questions.length)
@@ -339,6 +347,12 @@ export function ExamScreen() {
       setShowDisqualifyDialog(false)
     }
   }, [status])
+
+  // Reset test results when question changes
+  useEffect(() => {
+    setTestResults([])
+    setPassPercentage(undefined)
+  }, [currentQuestionIndex])
 
   useEffect(() => {
     if (!aiStream0 || !aiStream1) return;
@@ -478,6 +492,25 @@ export function ExamScreen() {
     [currentQuestion, setAnswer]
   )
 
+  const handleRunTests = useCallback(
+    async (code: string, problemId: string) => {
+      if (!currentQuestion || currentQuestion.type !== 'code') return
+
+      try {
+        console.log('[ExamScreen] Running tests for problem:', currentQuestion.id)
+        const result = await executeCode(code, currentQuestion.id)
+        setTestResults(result.test_results)
+        setPassPercentage(result.pass_percentage)
+        console.log('[ExamScreen] Test results:', result.pass_percentage, '% passed')
+      } catch (err) {
+        console.error('[ExamScreen] Failed to run tests:', err)
+        setTestResults([])
+        setPassPercentage(0)
+      }
+    },
+    [currentQuestion]
+  )
+
   const handleSubmit = async () => {
     if (window.electronAPI) {
       await window.electronAPI.exam.setKiosk(false)
@@ -543,6 +576,9 @@ export function ExamScreen() {
               onChange={handleAnswer}
               onLanguageChange={setSelectedLanguage}
               onReset={() => handleAnswer(starterCode)}
+              onRunTests={handleRunTests}
+              testResults={testResults}
+              passPercentage={passPercentage}
             />
           </div>
         )

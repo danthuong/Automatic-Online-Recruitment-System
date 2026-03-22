@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     default_max_repos: int = 10
     evaluation_fast_mode: bool = True  # Skip git clone, use GitHub API only
 
+    # Node.js server settings (for CV/JD matching)
+    tin_endpoint: str = "http://10.18.151.50:5000/api/v1"
+
     # Server settings
     host: str = "0.0.0.0"
     port: int = 8000
